@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片设计方案生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                        mono: ['Space Mono', 'monospace'],
+                        display: ['Montserrat', 'sans-serif'],
+                        handwriting: ['Caveat', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- 导入Google字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono&family=Montserrat:wght@400;600;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono&family=Montserrat:wght@400;600;700&family=Caveat:wght@400;700&display=swap');
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #555;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+        
+        .canvas-container {
+            margin: 0 auto;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s ease;
+        }
+        
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-swatch.active {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px #000;
+        }
+        
+        .dark .color-swatch.active {
+            border-color: #000;
+            box-shadow: 0 0 0 2px #fff;
+        }
+        
+        /* Loading animation */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #5D5CDE;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        .dark .loader {
+            border-color: rgba(0, 0, 0, 0.3);
+            border-top-color: #5D5CDE;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .theme-preview {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .theme-preview:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dark .theme-preview:hover {
+            box-shadow: 0 10px 25px -5px rgba(255, 255, 255, 0.1), 0 10px 10px -5px rgba(255, 255, 255, 0.04);
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        
+        .tooltip:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+            z-index: 10;
+        }
+        
+        .dark .tooltip:hover::after {
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+        }
+        
+        .dark .tooltip:hover::before {
+            border-color: rgba(255, 255, 255, 0.8) transparent transparent transparent;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <!-- 检测用户的色彩模式偏好 -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+    
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold mb-2 text-primary">图片设计方案生成器</h1>
+            <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                生成具有设计感、艺术感和品牌感的图片设计方案。每个板块包含圆角面板，每个面板有独特的布局和设计。
+            </p>
+        </header>
+        
+        <div class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 设计面板控制区 -->
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4">设计控制</h2>
+                        
+                        <!-- 主题选择 -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium mb-2">设计主题</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                <button id="randomTheme" class="theme-btn bg-primary bg-opacity-90 hover:bg-opacity-100 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    随机主题
+                                </button>
+                                <button id="minimalTheme" class="theme-btn bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md transition duration-200">
+                                    简约主题
+                                </button>
+                                <button id="vibrantTheme" class="theme-btn bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md transition duration-200">
+                                    活力主题
+                                </button>
+                                <button id="elegantTheme" class="theme-btn bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md transition duration-200">
+                                    优雅主题
+                                </button>
+                                <button id="retroTheme" class="theme-btn bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md transition duration-200">
+                                    复古主题
+                                </button>
+                                <button id="techTheme" class="theme-btn bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-2 px-4 rounded-md transition duration-200">
+                                    科技主题
+                                </button>
+                            </div>
+                            
+                            <!-- 主题预览 -->
+                            <div class="grid grid-cols-3 gap-3 mt-4">
+                                <div class="theme-preview bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden h-32 p-2">
+                                    <div class="rounded-lg bg-blue-100 h-full w-full p-2 flex flex-col">
+                                        <div class="bg-blue-200 h-1/2 w-2/3 mb-1 rounded"></div>
+                                        <div class="bg-blue-300 h-1/4 w-full mb-1 rounded"></div>
+                                        <div class="bg-blue-400 h-1/4 w-1/2 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-preview bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden h-32 p-2">
+                                    <div class="rounded-lg bg-green-100 h-full w-full p-2 flex flex-col">
+                                        <div class="rounded-full bg-green-400 h-12 w-12 mb-1"></div>
+                                        <div class="bg-green-200 h-1/4 w-full mb-1 rounded"></div>
+                                        <div class="bg-green-300 h-1/4 w-2/3 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="theme-preview bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden h-32 p-2">
+                                    <div class="rounded-lg bg-purple-100 h-full w-full p-2 flex">
+                                        <div class="bg-purple-300 h-full w-1/2 mr-1 rounded"></div>
+                                        <div class="flex flex-col w-1/2">
+                                            <div class="bg-purple-200 h-1/2 w-full mb-1 rounded"></div>
+                                            <div class="bg-purple-400 h-1/2 w-full rounded"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 配色方案 -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium mb-2">配色方案</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <div class="color-swatch active" style="background-color: #3B82F6;" data-palette="blue"></div>
+                                <div class="color-swatch" style="background-color: #10B981;" data-palette="green"></div>
+                                <div class="color-swatch" style="background-color: #8B5CF6;" data-palette="purple"></div>
+                                <div class="color-swatch" style="background-color: #EC4899;" data-palette="pink"></div>
+                                <div class="color-swatch" style="background-color: #F59E0B;" data-palette="amber"></div>
+                                <div class="color-swatch" style="background-color: #EF4444;" data-palette="red"></div>
+                                <div class="color-swatch" style="background-color: #6B7280;" data-palette="gray"></div>
+                                <div class="color-swatch" style="background-color: #000000;" data-palette="mono"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 板块数量 -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium mb-2">板块数量</h3>
+                            <div class="flex items-center">
+                                <input type="range" id="panelCount" min="1" max="15" value="10" class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <span id="panelCountValue" class="ml-3 font-medium">10</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div class="flex flex-wrap gap-3">
+                            <button id="generateBtn" class="bg-primary hover:bg-opacity-90 text-white font-medium py-3 px-5 rounded-md transition duration-200 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                                生成设计
+                            </button>
+                            <button id="exportPNG" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-3 px-5 rounded-md transition duration-200 flex items-center justify-center tooltip" data-tooltip="导出为PNG图片">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                导出PNG
+                            </button>
+                            <button id="exportSVG" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 font-medium py-3 px-5 rounded-md transition duration-200 flex items-center justify-center tooltip" data-tooltip="导出为SVG矢量图">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                导出SVG
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 内容编辑区 -->
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4">内容编辑</h2>
+                        
+                        <!-- 当前面板选择 -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium mb-2">当前面板</h3>
+                            <div class="flex items-center mb-3">
+                                <button id="prevPanel" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-l-md p-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                                <div class="flex-1 text-center bg-gray-100 dark:bg-gray-800 py-2">
+                                    面板 <span id="currentPanelIndex">1</span> / <span id="totalPanels">10</span>
+                                </div>
+                                <button id="nextPanel" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-r-md p-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <!-- 面板内容预览 -->
+                            <div id="panelPreview" class="bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden h-40 mb-4 flex items-center justify-center">
+                                <p class="text-gray-400 dark:text-gray-500 text-sm">生成设计后在此处预览当前面板</p>
+                            </div>
+                            
+                            <!-- 文本内容编辑 -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-1">标题文本</label>
+                                <input type="text" id="titleText" class="w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600" value="设计感十足的标题文本" />
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-1">副标题</label>
+                                <input type="text" id="subtitleText" class="w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600" value="优雅的副标题文本示例" />
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium mb-1">正文内容</label>
+                                <textarea id="bodyText" class="w-full px-3 py-2 text-base border rounded-md dark:bg-gray-700 dark:border-gray-600" rows="3">这是一段示例正文内容。在这里您可以添加关于产品、服务或品牌的更多详细信息。这些内容可以替换为您自己的文字描述。</textarea>
+                            </div>
+                            
+                            <button id="updatePanelContent" class="bg-primary hover:bg-opacity-90 text-white font-medium py-2 px-4 rounded-md transition duration-200">
+                                更新当前面板内容
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 预览区域 -->
+        <div class="mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">设计预览</h2>
+                    <div class="flex items-center">
+                        <span class="text-sm text-gray-500 dark:text-gray-400 mr-2">缩放比例:</span>
+                        <select id="zoomLevel" class="bg-gray-100 dark:bg-gray-700 border-none rounded-md text-sm p-2">
+                            <option value="0.1">10%</option>
+                            <option value="0.25">25%</option>
+                            <option value="0.5" selected>50%</option>
+                            <option value="0.75">75%</option>
+                            <option value="1">100%</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 设计画布容器 -->
+                <div class="canvas-container bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div id="loadingIndicator" class="hidden py-10 text-center">
+                        <div class="loader mb-3"></div>
+                        <p class="text-gray-500 dark:text-gray-400">生成设计中...</p>
+                    </div>
+                    <div id="canvasWrapper" class="overflow-x-auto">
+                        <canvas id="designCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 初始化 Fabric Canvas
+        let canvas = new fabric.Canvas('designCanvas');
+        
+        // 全局变量和设置
+        const CANVAS_WIDTH = 12000;
+        const CANVAS_HEIGHT = 1200;
+        const PANEL_WIDTH = 800;
+        const PANEL_HEIGHT = 1200;
+        const PANEL_COUNT = 10; // 默认面板数量
+        let currentPanelIndex = 0; // 当前选中的面板索引
+        let panelObjects = []; // 存储每个面板的对象
+        let currentPalette = 'blue'; // 默认配色方案
+        let currentTheme = 'random'; // 默认主题
+        
+        // 示例文本内容
+        const sampleTitles = [
+            "设计的力量", "视觉的表达", "创意无限", "艺术与科技", "美学空间",
+            "设计的语言", "视觉叙事", "形式与功能", "色彩的旋律", "品牌印象"
+        ];
+        
+        const sampleSubtitles = [
+            "探索视觉设计的可能性", "打造独特的品牌体验", "创意设计赋能品牌", 
+            "构建视觉语言系统", "艺术与实用的完美融合", "提升用户互动体验",
+            "从概念到实现", "设计驱动创新", "传递品牌价值", "视觉传达的艺术"
+        ];
+        
+        const sampleBodyText = [
+            "优秀的设计既能传达信息，又能唤起情感。通过细致的排版、色彩和图形元素，我们创造出引人入胜的视觉体验。",
+            "我们坚信设计的力量远超表面的美观。它能解决问题，讲述故事，并为用户创造有意义的体验。",
+            "品牌是企业与受众之间的情感纽带。通过精心设计的视觉系统，我们帮助品牌建立独特而一致的形象。",
+            "在数字时代，视觉设计扮演着至关重要的角色。它不仅是外表，更是用户体验的核心部分。",
+            "每一个成功的设计都源于对目标用户的深入理解。我们通过研究和同理心，创造真正有意义的设计。",
+            "通过形式、色彩、空间和排版的精妙安排，我们追求既美观又实用的设计解决方案。",
+            "好的设计是艺术与科学的融合，需要创造力和系统思维的完美平衡。",
+            "当设计与品牌战略紧密结合时，它能够强化企业定位，并在竞争中脱颖而出。",
+            "我们的设计过程注重探索与实验，寻找创新的视觉表达方式。",
+            "在多元化的媒体环境中，一致的视觉设计能够建立品牌信任并增强品牌认知。"
+        ];
+        
+        // 配色方案库
+        const colorPalettes = {
+            blue: ['#EBF8FF', '#BEE3F8', '#90CDF4', '#63B3ED', '#4299E1', '#3182CE', '#2B6CB0', '#2C5282', '#2A4365'],
+            green: ['#F0FFF4', '#C6F6D5', '#9AE6B4', '#68D391', '#48BB78', '#38A169', '#2F855A', '#276749', '#22543D'],
+            purple: ['#FAF5FF', '#E9D8FD', '#D6BCFA', '#B794F4', '#9F7AEA', '#805AD5', '#6B46C1', '#553C9A', '#44337A'],
+            pink: ['#FFF5F7', '#FED7E2', '#FBB6CE', '#F687B3', '#ED64A6', '#D53F8C', '#B83280', '#97266D', '#702459'],
+            amber: ['#FFFBEB', '#FEF3C7', '#FDE68A', '#FCD34D', '#FBBF24', '#F59E0B', '#D97706', '#B45309', '#92400E'],
+            red: ['#FFF5F5', '#FED7D7', '#FEB2B2', '#FC8181', '#F56565', '#E53E3E', '#C53030', '#9B2C2C', '#742A2A'],
+            gray: ['#F7FAFC', '#EDF2F7', '#E2E8F0', '#CBD5E0', '#A0AEC0', '#718096', '#4A5568', '#2D3748', '#1A202C'],
+            mono: ['#FFFFFF', '#F3F3F3', '#E5E5E5', '#D4D4D4', '#A3A3A3', '#737373', '#525252', '#404040', '#171717']
+        };
+        
+        // 字体库
+        const fontFamilies = [
+            'Inter, sans-serif',
+            'Playfair Display, serif',
+            'Space Mono, monospace',
+            'Montserrat, sans-serif',
+            'Caveat, cursive'
+        ];
+        
+        // 布局模板库
+        const layoutTemplates = [
+            // 简约布局
+            {
+                name: 'minimal-1',
+                frames: [
+                    { type: 'rect', left: 100, top: 150, width: 600, height: 400, rx: 20, ry: 20, fill: null },
+                    { type: 'text', left: 150, top: 250, width: 500, fontSize: 48, fontFamily: 0 },
+                    { type: 'text', left: 150, top: 350, width: 500, fontSize: 24, fontFamily: 0 },
+                    { type: 'text', left: 150, top: 450, width: 500, fontSize: 16, fontFamily: 0 }
+                ]
+            },
+            {
+                name: 'minimal-2',
+                frames: [
+                    { type: 'rect', left: 100, top: 150, width: 600, height: 900, rx: 20, ry: 20, fill: null },
+                    { type: 'text', left: 150, top: 200, width: 500, fontSize: 36, fontFamily: 0 },
+                    { type: 'rect', left: 150, top: 300, width: 500, height: 300, rx: 10, ry: 10, fill: null },
+                    { type: 'text', left: 150, top: 650, width: 500, fontSize: 18, fontFamily: 0 }
+                ]
+            },
+            
+            // 分割布局
+            {
+                name: 'split-1',
+                frames: [
+                    { type: 'rect', left: 50, top: 50, width: 700, height: 1100, rx: 30, ry: 30, fill: null },
+                    { type: 'rect', left: 100, top: 150, width: 600, height: 400, rx: 20, ry: 20, fill: null },
+                    { type: 'text', left: 150, top: 600, width: 500, fontSize: 42, fontFamily: 1 },
+                    { type: 'text', left: 150, top: 700, width: 500, fontSize: 18, fontFamily: 0 }
+                ]
+            },
+            {
+                name: 'split-2',
+                frames: [
+                    { type: 'rect', left: 50, top: 100, width: 350, height: 1000, rx: 20, ry: 20, fill: null },
+                    { type: 'rect', left: 450, top: 100, width: 300, height: 1000, rx: 20, ry: 20, fill: null },
+                    { type: 'text', left: 100, top: 150, width: 250, fontSize: 36, fontFamily: 1 },
+                    { type: 'text', left: 100, top: 300, width: 250, fontSize: 16, fontFamily: 0 },
+                    { type: 'text', left: 500, top: 150, width: 200, fontSize: 24, fontFamily: 0 }
+                ]
+            },
+            
+            // 圆形布局
+            {
+                name: 'circular-1',
+                frames: [
+                    { type: 'circle', left: 400, top: 400, radius: 250, fill: null },
+                    { type: 'text', left: 250, top: 350, width: 300, fontSize: 32, fontFamily: 3 },
+                    { type: 'text', left: 250, top: 450, width: 300, fontSize: 16, fontFamily: 0 }
+                ]
+            },
+            {
+                name: 'circular-2',
+                frames: [
+                    { type: 'circle', left: 200, top: 300, radius: 150, fill: null },
+                    { type: 'circle', left: 500, top: 700, radius: 200, fill: null },
+                    { type: 'text', left: 300, top: 500, width: 400, fontSize: 36, fontFamily: 4 },
+                    { type: 'text', left: 150, top: 600, width: 500, fontSize: 18, fontFamily: 0 }
+                ]
+            },
+            
+            // 格栅布局
+            {
+                name: 'grid-1',
+                frames: [
+                    { type: 'rect', left: 100, top: 100, width: 280, height: 280, rx: 15, ry: 15, fill: null },
+                    { type: 'rect', left: 420, top: 100, width: 280, height: 280, rx: 15, ry: 15, fill: null },
+                    { type: 'rect', left: 100, top: 420, width: 280, height: 280, rx: 15, ry: 15, fill: null },
+                    { type: 'rect', left: 420, top: 420, width: 280, height: 280, rx: 15, ry: 15, fill: null },
+                    { type: 'text', left: 150, top: 800, width: 500, fontSize: 36, fontFamily: 3 },
+                    { type: 'text', left: 150, top: 900, width: 500, fontSize: 18, fontFamily: 0 }
+                ]
+            },
+            {
+                name: 'grid-2',
+                frames: [
+                    { type: 'rect', left: 50, top: 50, width: 700, height: 300, rx: 20, ry: 20, fill: null },
+                    { type: 'rect', left: 50, top: 400, width: 330, height: 350, rx: 20, ry: 20, fill: null },
+                    { type: 'rect', left: 420, top: 400, width: 330, height: 350, rx: 20, ry: 20, fill: null },
+                    { type: 'text', left: 100, top: 800, width: 600, fontSize: 30, fontFamily: 1 },
+                    { type: 'text', left: 100, top: 900, width: 600, fontSize: 16, fontFamily: 0 }
+                ]
+            },
+            
+            // 对角线布局
+            {
+                name: 'diagonal-1',
+                frames: [
+                    { type: 'rect', left: 50, top: 50, width: 700, height: 1100, rx: 30, ry: 30, fill: null, angle: 5 },
+                    { type: 'text', left: 150, top: 200, width: 500, fontSize: 42, fontFamily: 3, angle: 5 },
+                    { type: 'text', left: 150, top: 400, width: 500, fontSize: 18, fontFamily: 0, angle: 5 },
+                    { type: 'rect', left: 200, top: 600, width: 400, height: 300, rx: 20, ry: 20, fill: null, angle: -5 }
+                ]
+            },
+            {
+                name: 'diagonal-2',
+                frames: [
+                    { type: 'rect', left: 100, top: 100, width: 600, height: 400, rx: 20, ry: 20, fill: null, angle: -3 },
+                    { type: 'rect', left: 150, top: 600, width: 500, height: 400, rx: 20, ry: 20, fill: null, angle: 3 },
+                    { type: 'text', left: 200, top: 250, width: 400, fontSize: 30, fontFamily: 4, angle: -3 },
+                    { type: 'text', left: 200, top: 750, width: 400, fontSize: 24, fontFamily: 0, angle: 3 }
+                ]
+            },
+            
+            // 技术感布局
+            {
+                name: 'tech-1',
+                frames: [
+                    { type: 'rect', left: 100, top: 100, width: 600, height: 1000, rx: 0, ry: 0, fill: null },
+                    { type: 'rect', left: 150, top: 150, width: 500, height: 2, rx: 0, ry: 0, fill: null },
+                    { type: 'text', left: 150, top: 200, width: 500, fontSize: 32, fontFamily: 2 },
+                    { type: 'rect', left: 150, top: 300, width: 2, height: 700, rx: 0, ry: 0, fill: null },
+                    { type: 'text', left: 200, top: 350, width: 450, fontSize: 16, fontFamily: 2 }
+                ]
+            },
+            {
+                name: 'tech-2',
+                frames: [
+                    { type: 'rect', left: 50, top: 50, width: 700, height: 1100, rx: 0, ry: 0, fill: null, strokeWidth: 1 },
+                    { type: 'rect', left: 70, top: 70, width: 660, height: 1060, rx: 0, ry: 0, fill: null, strokeWidth: 1 },
+                    { type: 'text', left: 100, top: 150, width: 600, fontSize: 38, fontFamily: 2 },
+                    { type: 'text', left: 100, top: 250, width: 600, fontSize: 16, fontFamily: 2 },
+                    { type: 'rect', left: 100, top: 350, width: 600, height: 600, rx: 0, ry: 0, fill: null, strokeWidth: 1 }
+                ]
+            },
+            
+            // 有机形状布局
+            {
+                name: 'organic-1',
+                frames: [
+                    { type: 'circle', left: 400, top: 300, radius: 250, fill: null, scaleX: 1.5, scaleY: 0.8 },
+                    { type: 'circle', left: 250, top: 700, radius: 200, fill: null, scaleX: 0.8, scaleY: 1.2 },
+                    { type: 'circle', left: 550, top: 800, radius: 150, fill: null, scaleX: 1.2, scaleY: 0.7 },
+                    { type: 'text', left: 300, top: 300, width: 400, fontSize: 38, fontFamily: 4 },
+                    { type: 'text', left: 200, top: 700, width: 400, fontSize: 18, fontFamily: 0 }
+                ]
+            },
+            {
+                name: 'organic-2',
+                frames: [
+                    { type: 'rect', left: 100, top: 100, width: 600, height: 400, rx: 200, ry: 100, fill: null },
+                    { type: 'rect', left: 200, top: 600, width: 400, height: 500, rx: 100, ry: 200, fill: null },
+                    { type: 'text', left: 250, top: 250, width: 300, fontSize: 36, fontFamily: 1 },
+                    { type: 'text', left: 300, top: 700, width: 200, fontSize: 20, fontFamily: 4 }
+                ]
+            }
+        ];
+        
+        // 根据不同主题预设布局组合
+        const themeLayouts = {
+            minimal: ['minimal-1', 'minimal-2', 'split-1', 'split-2'],
+            vibrant: ['circular-1', 'circular-2', 'organic-1', 'organic-2'],
+            elegant: ['split-1', 'split-2', 'diagonal-1', 'diagonal-2'],
+            retro: ['grid-1', 'grid-2', 'organic-1', 'organic-2'],
+            tech: ['tech-1', 'tech-2', 'grid-1', 'grid-2'],
+            random: layoutTemplates.map(layout => layout.name)
+        };
+        
+        // 初始化 Canvas
+        function initializeCanvas() {
+            // 设置 Canvas 尺寸
+            canvas.setWidth(CANVAS_WIDTH);
+            canvas.setHeight(CANVAS_HEIGHT);
+            
+            // 重置视图
+            canvas.viewportTransform = [0.5, 0, 0, 0.5, 0, 0]; // 默认50%缩放
+            canvas.renderAll();
+            
+            // 清空现有面板对象
+            panelObjects = [];
+            
+            // 初始化面板分隔线
+            drawPanelDividers();
+        }
+        
+        // 绘制面板分隔线
+        function drawPanelDividers() {
+            const panelCount = parseInt(document.getElementById('panelCount').value);
+            document.getElementById('totalPanels').textContent = panelCount;
+            
+            for (let i = 1; i < panelCount; i++) {
+                const line = new fabric.Line([i * PANEL_WIDTH, 0, i * PANEL_WIDTH, CANVAS_HEIGHT], {
+                    stroke: '#ddd',
+                    selectable: false,
+                    evented: false
+                });
+                canvas.add(line);
+            }
+        }
+        
+        // 根据当前选择生成设计
+        function generateDesign() {
+            // 显示加载指示器
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('canvasWrapper').classList.add('hidden');
+            
+            // 延迟执行以允许UI更新
+            setTimeout(() => {
+                // 重置 Canvas
+                canvas.clear();
+                initializeCanvas();
+                
+                const panelCount = parseInt(document.getElementById('panelCount').value);
+                const colors = colorPalettes[currentPalette];
+                
+                // 获取当前主题的布局集合
+                const themeLayoutNames = themeLayouts[currentTheme] || themeLayouts.random;
+                
+                // 为每个面板生成设计
+                for (let i = 0; i < panelCount; i++) {
+                    // 为当前面板随机选择一个布局
+                    const layoutName = themeLayoutNames[Math.floor(Math.random() * themeLayoutNames.length)];
+                    const layoutTemplate = layoutTemplates.find(layout => layout.name === layoutName);
+                    
+                    // 计算面板的左上角位置
+                    const panelLeft = i * PANEL_WIDTH;
+                    
+                    // 创建面板背景
+                    const bgColor = colors[0]; // 使用最亮的颜色作为背景
+                    const panelBg = new fabric.Rect({
+                        left: panelLeft,
+                        top: 0,
+                        width: PANEL_WIDTH,
+                        height: PANEL_HEIGHT,
+                        fill: bgColor,
+                        selectable: false,
+                        evented: false
+                    });
+                    canvas.add(panelBg);
+                    
+                    // 创建面板容器
+                    const panel = new fabric.Rect({
+                        left: panelLeft + 50,
+                        top: 50,
+                        width: PANEL_WIDTH - 100,
+                        height: PANEL_HEIGHT - 100,
+                        rx: 20,
+                        ry: 20,
+                        fill: colors[1],
+                        selectable: false,
+                        evented: false
+                    });
+                    canvas.add(panel);
+                    
+                    // 存储这个面板的对象集合
+                    const panelGroup = {
+                        background: panelBg,
+                        container: panel,
+                        frames: [] // 将存储该面板内的所有框架
+                    };
+                    
+                    // 添加面板内容
+                    if (layoutTemplate) {
+                        // 为每个框架生成内容
+                        for (const frame of layoutTemplate.frames) {
+                            // 计算框架在整个画布中的位置
+                            const frameLeft = panelLeft + frame.left;
+                            const frameTop = frame.top;
+                            
+                            let frameObj;
+                            
+                            // 根据框架类型创建对象
+                            if (frame.type === 'rect') {
+                                frameObj = new fabric.Rect({
+                                    left: frameLeft,
+                                    top: frameTop,
+                                    width: frame.width,
+                                    height: frame.height,
+                                    rx: frame.rx || 0,
+                                    ry: frame.ry || 0,
+                                    fill: frame.fill === null ? colors[2] : frame.fill,
+                                    stroke: colors[8],
+                                    strokeWidth: frame.strokeWidth || 2,
+                                    angle: frame.angle || 0,
+                                    selectable: false,
+                                    evented: false
+                                });
+                            } else if (frame.type === 'circle') {
+                                frameObj = new fabric.Circle({
+                                    left: frameLeft,
+                                    top: frameTop,
+                                    radius: frame.radius,
+                                    fill: frame.fill === null ? colors[3] : frame.fill,
+                                    stroke: colors[8],
+                                    strokeWidth: 2,
+                                    scaleX: frame.scaleX || 1,
+                                    scaleY: frame.scaleY || 1,
+                                    selectable: false,
+                                    evented: false
+                                });
+                            } else if (frame.type === 'text') {
+                                // 根据位置选择适当的示例文本
+                                let text;
+                                let color = colors[8]; // 深色文本
+                                const fontFamily = fontFamilies[frame.fontFamily || 0];
+                                
+                                // 随机选择样本文本内容
+                                if (frame.fontSize >= 32) {
+                                    // 标题文本
+                                    text = sampleTitles[Math.floor(Math.random() * sampleTitles.length)];
+                                } else if (frame.fontSize >= 20) {
+                                    // 副标题文本
+                                    text = sampleSubtitles[Math.floor(Math.random() * sampleSubtitles.length)];
+                                } else {
+                                    // 正文内容
+                                    text = sampleBodyText[Math.floor(Math.random() * sampleBodyText.length)];
+                                }
+                                
+                                frameObj = new fabric.Textbox(text, {
+                                    left: frameLeft,
+                                    top: frameTop,
+                                    width: frame.width,
+                                    fontSize: frame.fontSize,
+                                    fontFamily: fontFamily,
+                                    fill: color,
+                                    angle: frame.angle || 0,
+                                    textAlign: 'left',
+                                    selectable: false,
+                                    evented: false
+                                });
+                            }
+                            
+                            if (frameObj) {
+                                canvas.add(frameObj);
+                                panelGroup.frames.push(frameObj);
+                            }
+                        }
+                    }
+                    
+                    // 存储这个面板的所有对象
+                    panelObjects.push(panelGroup);
+                }
+                
+                canvas.renderAll();
+                
+                // 隐藏加载指示器，显示画布
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('canvasWrapper').classList.remove('hidden');
+                
+                // 初始化当前面板
+                currentPanelIndex = 0;
+                updatePanelPreview();
+            }, 100);
+        }
+        
+        // 更新当前面板预览
+        function updatePanelPreview() {
+            const preview = document.getElementById('panelPreview');
+            preview.innerHTML = '';
+            
+            // 确保有可用的面板对象
+            if (panelObjects.length === 0 || !panelObjects[currentPanelIndex]) {
+                preview.innerHTML = '<p class="text-gray-400 dark:text-gray-500 text-sm text-center">无可用面板预览</p>';
+                return;
+            }
+            
+            // 创建预览画布
+            const previewCanvas = document.createElement('canvas');
+            previewCanvas.width = PANEL_WIDTH / 2;
+            previewCanvas.height = PANEL_HEIGHT / 2;
+            previewCanvas.classList.add('mx-auto');
+            preview.appendChild(previewCanvas);
+            
+            // 初始化 Fabric 预览画布
+            const fCanvas = new fabric.StaticCanvas(previewCanvas);
+            
+            // 复制当前面板内容到预览画布
+            const panel = panelObjects[currentPanelIndex];
+            
+            // 设置缩放和位移以显示整个面板
+            fCanvas.setZoom(0.5);
+            fCanvas.setWidth(PANEL_WIDTH / 2);
+            fCanvas.setHeight(PANEL_HEIGHT / 2);
+            
+            // 克隆背景和容器并添加到预览
+            const bgClone = fabric.util.object.clone(panel.background);
+            bgClone.left = 0; // 重置位置为预览画布的原点
+            fCanvas.add(bgClone);
+            
+            const containerClone = fabric.util.object.clone(panel.container);
+            containerClone.left = containerClone.left - (currentPanelIndex * PANEL_WIDTH); // 调整位置
+            fCanvas.add(containerClone);
+            
+            // 克隆所有框架并添加到预览
+            panel.frames.forEach(frame => {
+                const frameClone = fabric.util.object.clone(frame);
+                frameClone.left = frameClone.left - (currentPanelIndex * PANEL_WIDTH); // 调整位置
+                fCanvas.add(frameClone);
+            });
+            
+            fCanvas.renderAll();
+            
+            // 更新当前面板索引显示
+            document.getElementById('currentPanelIndex').textContent = currentPanelIndex + 1;
+        }
+        
+        // 更新当前面板内容
+        function updateCurrentPanelContent() {
+            if (panelObjects.length === 0 || !panelObjects[currentPanelIndex]) {
+                return; // 没有面板可更新
+            }
+            
+            const titleText = document.getElementById('titleText').value;
+            const subtitleText = document.getElementById('subtitleText').value;
+            const bodyText = document.getElementById('bodyText').value;
+            
+            // 获取当前面板中的所有文本对象
+            const textObjects = panelObjects[currentPanelIndex].frames.filter(
+                obj => obj.type === 'textbox'
+            );
+            
+            // 按照字体大小排序，大的优先（标题->副标题->正文）
+            textObjects.sort((a, b) => b.fontSize - a.fontSize);
+            
+            // 更新文本内容
+            if (textObjects.length > 0) {
+                // 最大字体大小的是标题
+                textObjects[0].set('text', titleText);
+                
+                if (textObjects.length > 1) {
+                    // 第二大字体大小的是副标题
+                    textObjects[1].set('text', subtitleText);
+                    
+                    if (textObjects.length > 2) {
+                        // 其余的是正文
+                        for (let i = 2; i < textObjects.length; i++) {
+                            textObjects[i].set('text', bodyText);
+                        }
+                    }
+                }
+                
+                canvas.renderAll();
+                updatePanelPreview();
+            }
+        }
+        
+        // 导出为PNG
+        function exportToPNG() {
+            // 设置临时缩放级别为100%以获得完整分辨率
+            const originalZoom = canvas.getZoom();
+            canvas.setZoom(1);
+            canvas.renderAll();
+            
+            // 创建一个新的画布来导出（以防当前视图可能是缩放或滚动的）
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = CANVAS_WIDTH;
+            exportCanvas.height = CANVAS_HEIGHT;
+            const exportContext = exportCanvas.getContext('2d');
+            
+            // 从原始画布复制内容
+            exportContext.drawImage(canvas.lowerCanvasEl, 0, 0);
+            
+            // 转换为数据URL然后下载
+            exportCanvas.toBlob(function(blob) {
+                saveAs(blob, "design-layout.png");
+                
+                // 恢复原始缩放
+                canvas.setZoom(originalZoom);
+                canvas.renderAll();
+            });
+        }
+        
+        // 导出为SVG
+        function exportToSVG() {
+            const svg = canvas.toSVG();
+            const blob = new Blob([svg], {type: "image/svg+xml"});
+            saveAs(blob, "design-layout.svg");
+        }
+        
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 主题选择按钮
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 移除当前激活状态
+                    document.querySelectorAll('.theme-btn').forEach(b => {
+                        b.classList.remove('bg-primary', 'bg-opacity-90', 'text-white');
+                        b.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                    });
+                    
+                    // 设置新激活状态
+                    this.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+                    this.classList.add('bg-primary', 'bg-opacity-90', 'text-white');
+                    
+                    // 设置当前主题
+                    if (this.id === 'randomTheme') currentTheme = 'random';
+                    else if (this.id === 'minimalTheme') currentTheme = 'minimal';
+                    else if (this.id === 'vibrantTheme') currentTheme = 'vibrant';
+                    else if (this.id === 'elegantTheme') currentTheme = 'elegant';
+                    else if (this.id === 'retroTheme') currentTheme = 'retro';
+                    else if (this.id === 'techTheme') currentTheme = 'tech';
+                });
+            });
+            
+            // 配色方案选择
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.addEventListener('click', function() {
+                    // 移除当前激活状态
+                    document.querySelectorAll('.color-swatch').forEach(s => {
+                        s.classList.remove('active');
+                    });
+                    
+                    // 设置新激活状态
+                    this.classList.add('active');
+                    
+                    // 设置当前配色
+                    currentPalette = this.dataset.palette;
+                });
+            });
+            
+            // 面板数量滑块
+            const panelCountSlider = document.getElementById('panelCount');
+            const panelCountValue = document.getElementById('panelCountValue');
+            
+            panelCountSlider.addEventListener('input', function() {
+                panelCountValue.textContent = this.value;
+                document.getElementById('totalPanels').textContent = this.value;
+            });
+            
+            // 面板导航按钮
+            document.getElementById('prevPanel').addEventListener('click', function() {
+                if (currentPanelIndex > 0) {
+                    currentPanelIndex--;
+                    updatePanelPreview();
+                }
+            });
+            
+            document.getElementById('nextPanel').addEventListener('click', function() {
+                if (currentPanelIndex < panelObjects.length - 1) {
+                    currentPanelIndex++;
+                    updatePanelPreview();
+                }
+            });
+            
+            // 更新面板内容按钮
+            document.getElementById('updatePanelContent').addEventListener('click', updateCurrentPanelContent);
+            
+            // 生成设计按钮
+            document.getElementById('generateBtn').addEventListener('click', generateDesign);
+            
+            // 导出按钮
+            document.getElementById('exportPNG').addEventListener('click', exportToPNG);
+            document.getElementById('exportSVG').addEventListener('click', exportToSVG);
+            
+            // 缩放控制
+            document.getElementById('zoomLevel').addEventListener('change', function() {
+                const zoom = parseFloat(this.value);
+                canvas.setZoom(zoom);
+                canvas.renderAll();
+            });
+        }
+        
+        // 初始化应用
+        function initApp() {
+            initializeCanvas();
+            initEventListeners();
+            generateDesign(); // 自动生成初始设计
+        }
+        
+        // 在页面加载后初始化应用
+        window.addEventListener('load', initApp);
+    </script>
+</body>
+</html>
