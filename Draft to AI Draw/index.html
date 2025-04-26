@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简笔画转AI画风工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        #canvas {
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .dark .tool-btn {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+        }
+        .tool-btn.active {
+            background-color: #5D5CDE !important;
+            color: white !important;
+        }
+        .dark #loading-indicator {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        #loading-indicator {
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        .tab-btn.active {
+            background-color: #5D5CDE;
+            color: white;
+        }
+        .dark .tab-btn {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+        }
+        .dark .tab-btn.active {
+            background-color: #5D5CDE;
+            color: white;
+        }
+        #realtime-result canvas {
+            border-radius: 0.5rem;
+        }
+        .style-btn {
+            transition: all 0.2s;
+            opacity: 0.7;
+        }
+        .style-btn.active {
+            border-color: #5D5CDE;
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        .ai-result-item {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white dark:bg-gray-900 dark:text-white transition-colors">
+    <div class="container mx-auto px-4 py-6 max-w-5xl">
+        <h1 class="text-3xl font-bold text-center mb-6 text-primary">简笔画转AI画风工具</h1>
+        
+        <!-- Drawing Tools -->
+        <div class="mb-4 flex flex-wrap gap-2 justify-center">
+            <button id="pen-tool" class="tool-btn active px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-center transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mr-1" viewBox="0 0 16 16">
+                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+                </svg>
+                画笔
+            </button>
+            <button id="eraser-tool" class="tool-btn px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-center transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mr-1" viewBox="0 0 16 16">
+                    <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828l6.879-6.879zm2.121.707a1 1 0 0 0-1.414 0L4.16 7.547l5.293 5.293 4.633-4.633a1 1 0 0 0 0-1.414l-3.879-3.879zM8.746 13.547 3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293l.16-.16z"/>
+                </svg>
+                橡皮擦
+            </button>
+            <button id="clear-canvas" class="tool-btn px-3 py-2 bg-gray-100 rounded-lg flex items-center justify-center transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mr-1" viewBox="0 0 16 16">
+                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528ZM8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5Z"/>
+                </svg>
+                清除
+            </button>
+            <div class="flex items-center">
+                <label for="brush-size" class="mr-2 text-sm">笔刷大小:</label>
+                <input type="range" id="brush-size" min="1" max="50" value="5" class="w-24">
+                <span id="size-value" class="ml-2 text-sm">5px</span>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Drawing Canvas -->
+            <div class="border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden relative">
+                <canvas id="canvas" class="w-full bg-white" width="500" height="500"></canvas>
+            </div>
+
+            <!-- Generation Tabs -->
+            <div class="flex flex-col h-full">
+                <!-- Tab Buttons -->
+                <div class="flex mb-4">
+                    <button id="realtime-tab" class="tab-btn active flex-1 py-2 px-4 rounded-tl-lg rounded-bl-lg text-center">
+                        实时生成
+                    </button>
+                    <button id="ai-tab" class="tab-btn flex-1 py-2 px-4 rounded-tr-lg rounded-br-lg text-center">
+                        AI生成
+                    </button>
+                </div>
+                
+                <!-- Realtime Generation Tab -->
+                <div id="realtime-panel" class="flex-1">
+                    <div class="mb-4">
+                        <label class="block mb-2 text-sm font-medium">选择风格:</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button class="style-btn active flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="sketch">
+                                <span class="text-xs">素描</span>
+                            </button>
+                            <button class="style-btn flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="watercolor">
+                                <span class="text-xs">水彩</span>
+                            </button>
+                            <button class="style-btn flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="oil">
+                                <span class="text-xs">油画</span>
+                            </button>
+                            <button class="style-btn flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="cartoon">
+                                <span class="text-xs">卡通</span>
+                            </button>
+                            <button class="style-btn flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="pixel">
+                                <span class="text-xs">像素</span>
+                            </button>
+                            <button class="style-btn flex flex-col items-center p-2 border-2 border-gray-200 dark:border-gray-700 rounded-lg" data-style="random">
+                                <span class="text-xs">随机</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <label class="block mb-2 text-sm font-medium">实时预览:</label>
+                    <div id="realtime-result" class="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-2 h-64 flex items-center justify-center">
+                        <p class="text-gray-400 dark:text-gray-500">开始绘制简笔画查看实时效果</p>
+                    </div>
+                    
+                    <div class="flex justify-center mt-4">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="auto-generate" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                            <span class="ml-3 text-sm font-medium">自动生成</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- AI Generation Tab -->
+                <div id="ai-panel" class="flex-1 hidden">
+                    <div class="mb-4">
+                        <label for="ai-model" class="block mb-2 text-sm font-medium">选择模型:</label>
+                        <select id="ai-model" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                            <option value="FLUX-pro-1.1">FLUX-pro-1.1 (高质量)</option>
+                            <option value="FLUX-schnell">FLUX-schnell (快速)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="prompt-input" class="block mb-2 text-sm font-medium">提示词:</label>
+                        <div class="flex">
+                            <input type="text" id="prompt-input" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white text-base" placeholder="输入提示词或留空使用随机提示词">
+                            <button id="random-prompt" class="ml-2 px-3 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.624 9.624 0 0 0 7.556 8a9.624 9.624 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.595 10.595 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.624 9.624 0 0 0 6.444 8a9.624 9.624 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5z"/>
+                                    <path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192zm0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="image-count" class="block mb-2 text-sm font-medium">生成数量:</label>
+                        <div class="flex items-center">
+                            <input type="range" id="image-count" min="1" max="4" value="1" class="w-full">
+                            <span id="count-value" class="ml-2 text-sm">1张</span>
+                        </div>
+                    </div>
+                    
+                    <button id="generate-ai-btn" class="w-full px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-opacity-90 transition flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="mr-2" viewBox="0 0 16 16">
+                            <path d="M5 1a2 2 0 0 0-2 2v1h10V3a2 2 0 0 0-2-2H5zm6 8H5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1z"/>
+                            <path d="M0 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2H2a2 2 0 0 1-2-2V7zm2.5 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                        </svg>
+                        生成AI图片
+                    </button>
+                    
+                    <div id="ai-results-container" class="mt-4 grid grid-cols-2 gap-2 overflow-y-auto max-h-80 hidden">
+                        <!-- AI Generated Results will be placed here -->
+                    </div>
+                    
+                    <div id="ai-loading" class="mt-4 p-4 flex items-center justify-center flex-col hidden">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
+                        <p id="ai-loading-text">正在生成AI图片...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-8 text-sm text-gray-500 dark:text-gray-400 text-center">
+            <p>本应用支持实时风格转换和AI模型生成。实时生成提供即时预览，AI生成提供高质量结果。</p>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Canvas drawing setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const brushSize = document.getElementById('brush-size');
+        const sizeValue = document.getElementById('size-value');
+        const penTool = document.getElementById('pen-tool');
+        const eraserTool = document.getElementById('eraser-tool');
+        const clearCanvas = document.getElementById('clear-canvas');
+        
+        // Tab elements
+        const realtimeTab = document.getElementById('realtime-tab');
+        const aiTab = document.getElementById('ai-tab');
+        const realtimePanel = document.getElementById('realtime-panel');
+        const aiPanel = document.getElementById('ai-panel');
+        
+        // Realtime panel elements
+        const realtimeResult = document.getElementById('realtime-result');
+        const autoGenerate = document.getElementById('auto-generate');
+        const styleButtons = document.querySelectorAll('.style-btn');
+        
+        // AI panel elements
+        const aiModel = document.getElementById('ai-model');
+        const promptInput = document.getElementById('prompt-input');
+        const randomPrompt = document.getElementById('random-prompt');
+        const imageCount = document.getElementById('image-count');
+        const countValue = document.getElementById('count-value');
+        const generateAiBtn = document.getElementById('generate-ai-btn');
+        const aiResultsContainer = document.getElementById('ai-results-container');
+        const aiLoading = document.getElementById('ai-loading');
+        const aiLoadingText = document.getElementById('ai-loading-text');
+        
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let currentStyle = 'sketch';
+        let hasDrawing = false;
+        let realtimeCanvas = null;
+        let realtimeCtx = null;
+        let lastDrawTime = 0;
+        const DEBOUNCE_TIME = 300; // milliseconds to wait before updating realtime preview
+        
+        // Random style prompts
+        const stylePrompts = {
+            sketch: ['素描风格', '铅笔素描', '手绘线稿', '黑白素描'],
+            watercolor: ['水彩画风格', '柔和水彩', '梦幻水彩画', '透明水彩'],
+            oil: ['油画风格', '厚重油彩', '经典油画', '印象派油画'],
+            cartoon: ['卡通风格', '动漫风格', '插画风格', '可爱卡通'],
+            pixel: ['像素艺术', '复古像素', '8位风格', '马赛克像素']
+        };
+        
+        // Random art prompts
+        const randomPrompts = [
+            "一个迷人的梦幻世界",
+            "童话中的城堡",
+            "未来科技城市",
+            "海底世界的景色",
+            "森林中的小屋",
+            "星空下的湖泊",
+            "古老的魔法书",
+            "宇宙太空站",
+            "神秘的山洞",
+            "花园中的仙女",
+            "机械时代的动物",
+            "秋天的公园",
+            "雨中的都市街道",
+            "古代文明的神殿",
+            "幻想中的飞行器",
+            "悬浮的岛屿",
+            "冬季的雪景",
+            "春天的花海",
+            "夏日海滩",
+            "古老的树屋"
+        ];
+        
+        // Set canvas size based on container
+        function resizeCanvas() {
+            const containerWidth = canvas.parentElement.clientWidth;
+            canvas.width = containerWidth;
+            canvas.height = containerWidth;
+            
+            // Redraw canvas after resize
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Set default line style
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Create realtime canvas if not exists
+            if (!realtimeCanvas) {
+                initRealtimeCanvas();
+            } else {
+                // Resize realtime canvas
+                const realtimeWidth = realtimeResult.clientWidth - 16; // Padding consideration
+                realtimeCanvas.width = realtimeWidth;
+                realtimeCanvas.height = realtimeWidth;
+                updateRealtimePreview();
+            }
+        }
+        
+        // Initialize canvas
+        function initCanvas() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Clear canvas with white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Initialize realtime preview canvas
+        function initRealtimeCanvas() {
+            // Remove existing canvas if any
+            while (realtimeResult.firstChild) {
+                realtimeResult.removeChild(realtimeResult.firstChild);
+            }
+            
+            // Create new canvas
+            realtimeCanvas = document.createElement('canvas');
+            const realtimeWidth = realtimeResult.clientWidth - 16; // Padding consideration
+            realtimeCanvas.width = realtimeWidth;
+            realtimeCanvas.height = realtimeWidth;
+            realtimeResult.appendChild(realtimeCanvas);
+            realtimeCtx = realtimeCanvas.getContext('2d');
+        }
+        
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            hasDrawing = true;
+            draw(e);
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+            
+            // Update realtime preview after drawing stops
+            if (hasDrawing && realtimeTab.classList.contains('active') && autoGenerate.checked) {
+                updateRealtimePreview();
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            ctx.lineWidth = brushSize.value;
+            
+            if (currentTool === 'pen') {
+                ctx.strokeStyle = 'black';
+                ctx.globalCompositeOperation = 'source-over';
+            } else if (currentTool === 'eraser') {
+                ctx.strokeStyle = 'white';
+                ctx.globalCompositeOperation = 'destination-out';
+            }
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches?.[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches?.[0].clientY) - rect.top;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            // Debounce realtime preview update
+            const now = Date.now();
+            if (now - lastDrawTime > DEBOUNCE_TIME && realtimeTab.classList.contains('active') && autoGenerate.checked) {
+                lastDrawTime = now;
+                updateRealtimePreview();
+            }
+        }
+        
+        // Update realtime preview with selected style
+        function updateRealtimePreview() {
+            if (!hasDrawing) return;
+            
+            // Clear the realtime canvas
+            realtimeCtx.clearRect(0, 0, realtimeCanvas.width, realtimeCanvas.height);
+            
+            // Get the drawing from the main canvas
+            const drawingImage = new Image();
+            drawingImage.src = canvas.toDataURL('image/png');
+            
+            drawingImage.onload = function() {
+                // Draw the original sketch
+                realtimeCtx.drawImage(drawingImage, 0, 0, realtimeCanvas.width, realtimeCanvas.height);
+                
+                // Apply selected style filter
+                applyStyleFilter(currentStyle);
+            };
+        }
+        
+        // Apply different style filters to the realtime preview
+        function applyStyleFilter(style) {
+            if (style === 'random') {
+                // Choose a random style except 'random'
+                const styles = Object.keys(stylePrompts).filter(s => s !== 'random');
+                style = styles[Math.floor(Math.random() * styles.length)];
+            }
+            
+            // Get image data from the realtime canvas
+            const imageData = realtimeCtx.getImageData(0, 0, realtimeCanvas.width, realtimeCanvas.height);
+            const data = imageData.data;
+            
+            // Apply different filters based on style
+            switch (style) {
+                case 'sketch':
+                    // Sketch effect - Enhance contrast and make grayscale
+                    for (let i = 0; i < data.length; i += 4) {
+                        const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                        const newVal = avg > 127 ? 255 : 0;
+                        data[i] = data[i + 1] = data[i + 2] = newVal;
+                    }
+                    break;
+                    
+                case 'watercolor':
+                    // Watercolor effect - Soft colors with some transparency
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i + 3] > 0) { // If not transparent
+                            // Get random pastel color
+                            const hue = Math.floor(Math.random() * 360);
+                            const saturation = 30 + Math.floor(Math.random() * 40); // 30-70%
+                            const lightness = 60 + Math.floor(Math.random() * 30); // 60-90%
+                            
+                            // Convert HSL to RGB
+                            const rgb = hslToRgb(hue / 360, saturation / 100, lightness / 100);
+                            data[i] = rgb[0];
+                            data[i + 1] = rgb[1];
+                            data[i + 2] = rgb[2];
+                            data[i + 3] = 127 + Math.floor(Math.random() * 128); // Semi-transparent
+                        }
+                    }
+                    
+                    // Add watercolor texture (some random splotches)
+                    for (let i = 0; i < 20; i++) {
+                        const x = Math.floor(Math.random() * realtimeCanvas.width);
+                        const y = Math.floor(Math.random() * realtimeCanvas.height);
+                        const radius = 5 + Math.floor(Math.random() * 20);
+                        
+                        realtimeCtx.save();
+                        realtimeCtx.globalAlpha = 0.05 + Math.random() * 0.1;
+                        realtimeCtx.beginPath();
+                        realtimeCtx.arc(x, y, radius, 0, Math.PI * 2);
+                        realtimeCtx.fillStyle = `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`;
+                        realtimeCtx.fill();
+                        realtimeCtx.restore();
+                    }
+                    
+                    realtimeCtx.putImageData(imageData, 0, 0);
+                    return; // Skip the final putImageData since we've already done custom painting
+                    
+                case 'oil':
+                    // Oil painting effect - Thicker strokes with rich colors
+                    for (let y = 0; y < realtimeCanvas.height; y += 4) {
+                        for (let x = 0; x < realtimeCanvas.width; x += 4) {
+                            const pixelIndex = (y * realtimeCanvas.width + x) * 4;
+                            
+                            if (data[pixelIndex + 3] > 0) {
+                                // Get a rich color with slight variation
+                                const r = 50 + Math.floor(Math.random() * 150);
+                                const g = 30 + Math.floor(Math.random() * 100);
+                                const b = 20 + Math.floor(Math.random() * 80);
+                                
+                                // Draw a small rectangle to simulate brush stroke
+                                const strokeWidth = 3 + Math.floor(Math.random() * 5);
+                                const strokeHeight = 3 + Math.floor(Math.random() * 5);
+                                
+                                realtimeCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                                realtimeCtx.fillRect(x, y, strokeWidth, strokeHeight);
+                            }
+                        }
+                    }
+                    return; // Skip the final putImageData
+                    
+                case 'cartoon':
+                    // Cartoon effect - Bold outlines and flat colors
+                    // First pass: find edges
+                    const edges = new Uint8ClampedArray(data.length);
+                    for (let y = 1; y < realtimeCanvas.height - 1; y++) {
+                        for (let x = 1; x < realtimeCanvas.width - 1; x++) {
+                            const idx = (y * realtimeCanvas.width + x) * 4;
+                            const idxLeft = (y * realtimeCanvas.width + (x - 1)) * 4;
+                            const idxRight = (y * realtimeCanvas.width + (x + 1)) * 4;
+                            const idxUp = ((y - 1) * realtimeCanvas.width + x) * 4;
+                            const idxDown = ((y + 1) * realtimeCanvas.width + x) * 4;
+                            
+                            // Calculate gradient
+                            const gradX = data[idxLeft] - data[idxRight];
+                            const gradY = data[idxUp] - data[idxDown];
+                            const grad = Math.sqrt(gradX * gradX + gradY * gradY);
+                            
+                            // If gradient is high, mark as edge
+                            edges[idx] = edges[idx + 1] = edges[idx + 2] = grad > 20 ? 0 : 255;
+                            edges[idx + 3] = 255;
+                        }
+                    }
+                    
+                    // Second pass: apply cartoon colors
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (edges[i] === 0) {
+                            // Bold black outline
+                            data[i] = data[i + 1] = data[i + 2] = 0;
+                        } else if (data[i + 3] > 0) {
+                            // Flat bright colors for filled areas
+                            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                            if (brightness < 127) {
+                                data[i] = 255; // Red
+                                data[i + 1] = 100; // Green
+                                data[i + 2] = 100; // Blue
+                            } else {
+                                data[i] = 100; // Red
+                                data[i + 1] = 200; // Green
+                                data[i + 2] = 255; // Blue
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'pixel':
+                    // Pixel art effect - Reduce resolution and limit colors
+                    const pixelSize = 8;
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = realtimeCanvas.width;
+                    tempCanvas.height = realtimeCanvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // Draw the original image
+                    tempCtx.putImageData(imageData, 0, 0);
+                    
+                    // Clear the realtime canvas
+                    realtimeCtx.clearRect(0, 0, realtimeCanvas.width, realtimeCanvas.height);
+                    
+                    // Draw pixelated version
+                    for (let y = 0; y < realtimeCanvas.height; y += pixelSize) {
+                        for (let x = 0; x < realtimeCanvas.width; x += pixelSize) {
+                            const pixelX = Math.floor(x / pixelSize) * pixelSize;
+                            const pixelY = Math.floor(y / pixelSize) * pixelSize;
+                            
+                            // Get color from center of pixel block
+                            const pixelData = tempCtx.getImageData(
+                                pixelX + pixelSize / 2, 
+                                pixelY + pixelSize / 2, 
+                                1, 1
+                            ).data;
+                            
+                            // Limit color palette to a few colors
+                            const r = Math.round(pixelData[0] / 64) * 64;
+                            const g = Math.round(pixelData[1] / 64) * 64;
+                            const b = Math.round(pixelData[2] / 64) * 64;
+                            
+                            if (pixelData[3] > 0) {
+                                realtimeCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                                realtimeCtx.fillRect(pixelX, pixelY, pixelSize, pixelSize);
+                            }
+                        }
+                    }
+                    return; // Skip the final putImageData
+            }
+            
+            // Put the modified image data back to the canvas
+            realtimeCtx.putImageData(imageData, 0, 0);
+        }
+        
+        // Helper function to convert HSL to RGB
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+        
+        // Generate AI images
+        async function generateAIImages() {
+            if (!hasDrawing) {
+                alert('请先在画布上绘制简笔画');
+                return;
+            }
+            
+            // Show loading state
+            aiLoading.classList.remove('hidden');
+            aiResultsContainer.classList.add('hidden');
+            
+            // Get selected model
+            const selectedModel = aiModel.value;
+            
+            // Get count of images to generate
+            const count = parseInt(imageCount.value);
+            
+            // Get prompt or use random if empty
+            let prompt = promptInput.value.trim();
+            if (!prompt) {
+                const randomIndex = Math.floor(Math.random() * randomPrompts.length);
+                prompt = randomPrompts[randomIndex];
+                promptInput.value = prompt;
+            }
+            
+            // Convert canvas to data URL
+            const imageDataUrl = canvas.toDataURL('image/png');
+            
+            try {
+                // Convert data URL to Blob
+                const response = await fetch(imageDataUrl);
+                const blob = await response.blob();
+                const file = new File([blob], "sketch.png", { type: "image/png" });
+                
+                // Clear previous results
+                aiResultsContainer.innerHTML = '';
+                
+                // Register handler for multiple images
+                const handlerId = "ai-multi-handler";
+                let completedCount = 0;
+                
+                window.Poe.registerHandler(handlerId, (result) => {
+                    const msg = result.responses[0];
+                    
+                    if (msg.status === "error") {
+                        aiLoadingText.textContent = "生成失败: " + msg.statusText;
+                    } else if (msg.status === "incomplete") {
+                        aiLoadingText.textContent = `正在生成AI图片 (${completedCount + 1}/${count})...`;
+                    } else if (msg.status === "complete") {
+                        completedCount++;
+                        
+                        if (msg.attachments?.length > 0) {
+                            const imageAttachment = msg.attachments[0];
+                            
+                            // Create result item
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'ai-result-item border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden';
+                            
+                            // Create image
+                            const img = document.createElement('img');
+                            img.src = imageAttachment.url;
+                            img.className = 'w-full h-auto';
+                            img.alt = 'AI生成图片';
+                            resultItem.appendChild(img);
+                            
+                            // Add to container
+                            aiResultsContainer.appendChild(resultItem);
+                            
+                            // Show results container
+                            aiResultsContainer.classList.remove('hidden');
+                        }
+                        
+                        // Update loading text if more images to generate
+                        if (completedCount < count) {
+                            aiLoadingText.textContent = `正在生成AI图片 (${completedCount + 1}/${count})...`;
+                        } else {
+                            // Hide loading when all images are generated
+                            aiLoading.classList.add('hidden');
+                        }
+                    }
+                });
+                
+                // Generate images one by one using repeat command
+                await window.Poe.sendUserMessage(`/repeat ${count} @${selectedModel} ${prompt}`, {
+                    attachments: [file],
+                    handler: handlerId,
+                    stream: false,
+                    openChat: false
+                });
+                
+            } catch (err) {
+                aiLoadingText.textContent = "发生错误: " + err;
+                console.error("Error:", err);
+                
+                // Hide loading indicator after a delay
+                setTimeout(() => {
+                    aiLoading.classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        // Generate random prompt
+        function getRandomPrompt() {
+            // Choose a random art prompt
+            const artPrompt = randomPrompts[Math.floor(Math.random() * randomPrompts.length)];
+            
+            // Choose a random style from the current style or all styles
+            let styleArray;
+            if (currentStyle === 'random') {
+                // Use all styles
+                styleArray = [];
+                for (const style in stylePrompts) {
+                    styleArray = styleArray.concat(stylePrompts[style]);
+                }
+            } else {
+                styleArray = stylePrompts[currentStyle];
+            }
+            
+            const stylePrompt = styleArray[Math.floor(Math.random() * styleArray.length)];
+            
+            return `${artPrompt}，${stylePrompt}`;
+        }
+        
+        // Attach event listeners
+        
+        // Drawing events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrawing(e);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e);
+        });
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+        
+        // Tool selection
+        penTool.addEventListener('click', () => {
+            currentTool = 'pen';
+            penTool.classList.add('active');
+            eraserTool.classList.remove('active');
+        });
+        
+        eraserTool.addEventListener('click', () => {
+            currentTool = 'eraser';
+            eraserTool.classList.add('active');
+            penTool.classList.remove('active');
+        });
+        
+        // Clear canvas button
+        clearCanvas.addEventListener('click', () => {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            hasDrawing = false;
+            
+            // Clear realtime preview if active
+            if (realtimeTab.classList.contains('active')) {
+                if (realtimeCtx) {
+                    realtimeCtx.clearRect(0, 0, realtimeCanvas.width, realtimeCanvas.height);
+                }
+                realtimeResult.innerHTML = '<p class="text-gray-400 dark:text-gray-500">开始绘制简笔画查看实时效果</p>';
+                realtimeCanvas = null;
+            }
+        });
+        
+        // Brush size control
+        brushSize.addEventListener('input', () => {
+            sizeValue.textContent = `${brushSize.value}px`;
+        });
+        
+        // Tab switching
+        realtimeTab.addEventListener('click', () => {
+            realtimeTab.classList.add('active');
+            aiTab.classList.remove('active');
+            realtimePanel.classList.remove('hidden');
+            aiPanel.classList.add('hidden');
+            
+            // Initialize realtime canvas if needed
+            if (!realtimeCanvas && hasDrawing) {
+                initRealtimeCanvas();
+                updateRealtimePreview();
+            }
+        });
+        
+        aiTab.addEventListener('click', () => {
+            aiTab.classList.add('active');
+            realtimeTab.classList.remove('active');
+            aiPanel.classList.remove('hidden');
+            realtimePanel.classList.add('hidden');
+        });
+        
+        // Style buttons
+        styleButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                styleButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                button.classList.add('active');
+                
+                // Update current style
+                currentStyle = button.dataset.style;
+                
+                // Update preview if we have a drawing
+                if (hasDrawing && realtimeCanvas) {
+                    updateRealtimePreview();
+                }
+            });
+        });
+        
+        // Auto generate toggle
+        autoGenerate.addEventListener('change', () => {
+            if (autoGenerate.checked && hasDrawing && realtimeCanvas) {
+                updateRealtimePreview();
+            }
+        });
+        
+        // Image count slider
+        imageCount.addEventListener('input', () => {
+            countValue.textContent = `${imageCount.value}张`;
+        });
+        
+        // Random prompt button
+        randomPrompt.addEventListener('click', () => {
+            promptInput.value = getRandomPrompt();
+        });
+        
+        // Generate AI button
+        generateAiBtn.addEventListener('click', generateAIImages);
+        
+        // Initialize the app
+        initCanvas();
+    </script>
+</body>
+</html>

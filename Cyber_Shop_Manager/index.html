@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonVerse 管理控制台</title>
+    <!-- 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js - 数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Three.js - 用于背景效果 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <!-- GSAP - 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif']
+                    },
+                    colors: {
+                        neon: {
+                            pink: '#FF2A6D',
+                            blue: '#05D9E8',
+                            purple: '#9D4EDD',
+                            green: '#39FF14',
+                            yellow: '#F7FD04'
+                        },
+                        cyber: {
+                            dark: '#01012B',
+                            darker: '#010117',
+                            black: '#000004',
+                            gray: '#BFC0C0',
+                            light: '#DEDEDE'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glitch': 'glitch 2s linear infinite',
+                        'scanline': 'scanline 6s linear infinite',
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        /* 基本样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #010117;
+            color: #DEDEDE;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        /* WebGL 背景 */
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        
+        /* 霓虹效果 */
+        .neon-text {
+            text-shadow: 
+                0 0 5px #FF2A6D,
+                0 0 10px #FF2A6D;
+        }
+        
+        .neon-text-blue {
+            text-shadow: 
+                0 0 5px #05D9E8,
+                0 0 10px #05D9E8;
+        }
+        
+        .neon-text-green {
+            text-shadow: 
+                0 0 5px #39FF14,
+                0 0 10px #39FF14;
+        }
+        
+        .neon-text-purple {
+            text-shadow: 
+                0 0 5px #9D4EDD,
+                0 0 10px #9D4EDD;
+        }
+        
+        .neon-border {
+            position: relative;
+        }
+        
+        .neon-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1px solid #FF2A6D;
+            box-shadow: 0 0 5px #FF2A6D, inset 0 0 5px #FF2A6D;
+            z-index: -1;
+        }
+        
+        .neon-border-blue::before {
+            border-color: #05D9E8;
+            box-shadow: 0 0 5px #05D9E8, inset 0 0 5px #05D9E8;
+        }
+        
+        .neon-border-green::before {
+            border-color: #39FF14;
+            box-shadow: 0 0 5px #39FF14, inset 0 0 5px #39FF14;
+        }
+        
+        .neon-border-purple::before {
+            border-color: #9D4EDD;
+            box-shadow: 0 0 5px #9D4EDD, inset 0 0 5px #9D4EDD;
+        }
+        
+        /* 按钮悬停效果 */
+        .cyber-button {
+            position: relative;
+            color: #05D9E8;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            background: transparent;
+            border: 1px solid #05D9E8;
+            border-radius: 0;
+            padding: 0.5em 1.5em;
+            transition: all 0.2s;
+            overflow: hidden;
+            box-shadow: 0 0 5px #05D9E8;
+            cursor: pointer;
+        }
+        
+        .cyber-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to right,
+                rgba(5, 217, 232, 0) 0%,
+                rgba(5, 217, 232, 0.4) 50%,
+                rgba(5, 217, 232, 0) 100%
+            );
+            transform: rotate(30deg);
+            transition: transform 0.5s;
+        }
+        
+        .cyber-button:hover {
+            color: #000;
+            background: #05D9E8;
+            box-shadow: 0 0 10px #05D9E8;
+        }
+        
+        .cyber-button:hover::after {
+            transform: rotate(30deg) translateX(100%);
+        }
+        
+        .cyber-button-pink {
+            color: #FF2A6D;
+            border-color: #FF2A6D;
+            box-shadow: 0 0 5px #FF2A6D;
+        }
+        
+        .cyber-button-pink:hover {
+            color: #000;
+            background: #FF2A6D;
+            box-shadow: 0 0 10px #FF2A6D;
+        }
+        
+        .cyber-button-green {
+            color: #39FF14;
+            border-color: #39FF14;
+            box-shadow: 0 0 5px #39FF14;
+        }
+        
+        .cyber-button-green:hover {
+            color: #000;
+            background: #39FF14;
+            box-shadow: 0 0 10px #39FF14;
+        }
+        
+        .cyber-button-purple {
+            color: #9D4EDD;
+            border-color: #9D4EDD;
+            box-shadow: 0 0 5px #9D4EDD;
+        }
+        
+        .cyber-button-purple:hover {
+            color: #000;
+            background: #9D4EDD;
+            box-shadow: 0 0 10px #9D4EDD;
+        }
+        
+        /* 表单输入 */
+        .cyber-input {
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #05D9E8;
+            color: #DEDEDE;
+            padding: 0.5em 1em;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px #05D9E8;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        
+        .cyber-input:focus {
+            border-color: #FF2A6D;
+            box-shadow: 0 0 5px #FF2A6D;
+            outline: none;
+        }
+        
+        .cyber-select {
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #05D9E8;
+            color: #DEDEDE;
+            padding: 0.5em 1em;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px #05D9E8;
+            transition: all 0.3s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2305D9E8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5em;
+            font-size: 16px;
+        }
+        
+        .cyber-select:focus {
+            border-color: #FF2A6D;
+            box-shadow: 0 0 5px #FF2A6D;
+            outline: none;
+        }
+        
+        .cyber-checkbox {
+            appearance: none;
+            width: 1.2em;
+            height: 1.2em;
+            border: 1px solid #05D9E8;
+            border-radius: 0;
+            background-color: rgba(1, 1, 43, 0.5);
+            box-shadow: 0 0 5px #05D9E8;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 0.5em;
+        }
+        
+        .cyber-checkbox:checked {
+            background-color: #05D9E8;
+        }
+        
+        .cyber-checkbox:checked::before {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            font-size: 0.8em;
+        }
+        
+        /* 表格样式 */
+        .cyber-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        
+        .cyber-table th {
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            padding: 1rem;
+            background-color: rgba(1, 1, 23, 0.6);
+            border-bottom: 1px solid #05D9E8;
+            text-align: left;
+        }
+        
+        .cyber-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(5, 217, 232, 0.2);
+        }
+        
+        .cyber-table tr:hover td {
+            background-color: rgba(5, 217, 232, 0.05);
+        }
+        
+        /* 标签样式 */
+        .status-tag {
+            display: inline-block;
+            padding: 0.25em 0.75em;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+        
+        .status-tag-success {
+            background-color: rgba(57, 255, 20, 0.2);
+            color: #39FF14;
+            border: 1px solid #39FF14;
+        }
+        
+        .status-tag-pending {
+            background-color: rgba(247, 253, 4, 0.2);
+            color: #F7FD04;
+            border: 1px solid #F7FD04;
+        }
+        
+        .status-tag-danger {
+            background-color: rgba(255, 42, 109, 0.2);
+            color: #FF2A6D;
+            border: 1px solid #FF2A6D;
+        }
+        
+        /* 卡片样式 */
+        .cyber-card {
+            background: rgba(1, 1, 43, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(5, 217, 232, 0.3);
+            box-shadow: 0 0 15px rgba(5, 217, 232, 0.2);
+        }
+        
+        /* 图表容器 */
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 250px;
+            width: 100%;
+        }
+        
+        /* 侧边栏活动项高亮 */
+        .sidebar-item-active {
+            background-color: rgba(5, 217, 232, 0.1);
+            border-left: 3px solid #05D9E8;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #01012B;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #05D9E8;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF2A6D;
+        }
+        
+        /* 搜索框 */
+        .cyber-search {
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #05D9E8;
+            color: #DEDEDE;
+            padding: 0.5em 1em;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px #05D9E8;
+            transition: all 0.3s;
+            width: 100%;
+            font-size: 16px;
+            padding-left: 2.5rem;
+        }
+        
+        .cyber-search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #05D9E8;
+        }
+        
+        /* 提示和警告消息 */
+        .cyber-alert {
+            padding: 1rem;
+            border-radius: 0;
+            margin-bottom: 1rem;
+            font-family: 'Rajdhani', sans-serif;
+        }
+        
+        .cyber-alert-success {
+            background-color: rgba(57, 255, 20, 0.1);
+            border-left: 3px solid #39FF14;
+            color: #39FF14;
+        }
+        
+        .cyber-alert-info {
+            background-color: rgba(5, 217, 232, 0.1);
+            border-left: 3px solid #05D9E8;
+            color: #05D9E8;
+        }
+        
+        .cyber-alert-warning {
+            background-color: rgba(247, 253, 4, 0.1);
+            border-left: 3px solid #F7FD04;
+            color: #F7FD04;
+        }
+        
+        .cyber-alert-danger {
+            background-color: rgba(255, 42, 109, 0.1);
+            border-left: 3px solid #FF2A6D;
+            color: #FF2A6D;
+        }
+        
+        /* 模态框背景 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(1, 1, 23, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: #010117;
+            border: 1px solid #05D9E8;
+            box-shadow: 0 0 15px rgba(5, 217, 232, 0.3);
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* 加载动画 */
+        .cyber-loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid transparent;
+            border-top: 3px solid #FF2A6D;
+            border-right: 3px solid #05D9E8;
+            border-bottom: 3px solid #39FF14;
+            border-left: 3px solid #9D4EDD;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 60px;
+                left: -250px;
+                bottom: 0;
+                width: 250px;
+                z-index: 40;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            .topbar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 30;
+            }
+            
+            .content-wrapper {
+                padding-top: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- WebGL 背景 -->
+    <canvas id="bg-canvas"></canvas>
+    
+    <!-- 顶部导航 -->
+    <header class="topbar bg-cyber-darker border-b border-neon-blue p-4 flex justify-between items-center">
+        <div class="flex items-center">
+            <button id="sidebar-toggle" class="mr-4 md:hidden text-neon-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <div class="flex items-center">
+                <div class="relative mr-3">
+                    <div class="w-8 h-8 bg-neon-pink rounded-sm transform rotate-45"></div>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-cyber-darker font-orbitron font-bold text-xl">N</div>
+                </div>
+                <h1 class="font-orbitron font-bold text-xl md:text-2xl neon-text-blue">NEONVERSE <span class="font-rajdhani font-normal text-sm text-cyber-gray">管理控制台</span></h1>
+            </div>
+        </div>
+        
+        <div class="flex items-center">
+            <div class="mr-6 hidden md:block">
+                <span id="time" class="font-orbitron text-neon-green text-sm"></span>
+            </div>
+            <div class="relative mr-4">
+                <button class="relative p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span class="absolute top-0 right-0 h-2 w-2 bg-neon-pink rounded-full"></span>
+                </button>
+            </div>
+            <div class="flex items-center">
+                <div class="h-8 w-8 rounded-full bg-neon-blue bg-opacity-20 flex items-center justify-center mr-2">
+                    <span class="font-orbitron text-neon-blue">A</span>
+                </div>
+                <span class="font-rajdhani hidden md:block">管理员</span>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 侧边导航 -->
+    <aside class="sidebar bg-cyber-darker w-64 fixed top-0 bottom-0 pt-16 border-r border-neon-blue bg-opacity-90">
+        <div class="p-4">
+            <div class="relative">
+                <input type="text" class="cyber-search" placeholder="搜索...">
+                <span class="cyber-search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+        
+        <nav class="mt-4">
+            <p class="px-6 py-2 text-xs font-orbitron text-cyber-gray">主要功能</p>
+            <a href="#dashboard" class="sidebar-link sidebar-item-active flex items-center px-6 py-3 text-neon-blue hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                仪表盘
+            </a>
+            <a href="#products" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                产品管理
+            </a>
+            <a href="#orders" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                订单管理
+            </a>
+            <a href="#customers" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                客户管理
+            </a>
+            <a href="#inventory" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+                库存管理
+            </a>
+            <a href="#promotions" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                促销活动
+            </a>
+            
+            <p class="px-6 py-2 mt-4 text-xs font-orbitron text-cyber-gray">系统</p>
+            <a href="#settings" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-blue hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                系统设置
+            </a>
+            <a href="#" class="sidebar-link flex items-center px-6 py-3 text-white hover:bg-neon-pink hover:bg-opacity-10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                退出系统
+            </a>
+        </nav>
+        
+        <div class="absolute bottom-0 left-0 right-0 p-4">
+            <div class="cyber-card p-3 text-center">
+                <p class="text-xs text-cyber-gray mb-1">系统版本</p>
+                <p class="font-orbitron text-neon-blue text-sm">NeonVerse v2.5.8</p>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 主内容区域 -->
+    <div class="content-wrapper">
+        <main class="main-content ml-64" id="main-content">
+            <!-- 仪表盘 -->
+            <div id="dashboard-section" class="p-6">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-orbitron font-bold neon-text-blue mb-2">仪表盘</h2>
+                    <p class="text-cyber-gray">欢迎回来，管理员。以下是你商店的实时数据概览。</p>
+                </div>
+                
+                <!-- 信息提示 -->
+                <div class="cyber-alert cyber-alert-info mb-6 flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p>系统已更新至 v2.5.8 版本。新功能包括高级库存管理和API集成。<a href="#" class="underline">查看详情</a></p>
+                    </div>
+                </div>
+                
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+                    <!-- 订单卡片 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm text-cyber-gray">今日订单</p>
+                                <h3 class="text-3xl font-orbitron font-bold neon-text-blue mt-1">36</h3>
+                            </div>
+                            <div class="p-2 bg-neon-blue bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-neon-green flex items-center text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                </svg>
+                                18.2%
+                            </span>
+                            <span class="text-cyber-gray text-sm ml-2">较昨日</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 营收卡片 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm text-cyber-gray">今日营收</p>
+                                <h3 class="text-3xl font-orbitron font-bold neon-text-green mt-1">¥15,248</h3>
+                            </div>
+                            <div class="p-2 bg-neon-green bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-neon-green flex items-center text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                </svg>
+                                12.3%
+                            </span>
+                            <span class="text-cyber-gray text-sm ml-2">较昨日</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 用户卡片 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm text-cyber-gray">新增用户</p>
+                                <h3 class="text-3xl font-orbitron font-bold neon-text-purple mt-1">108</h3>
+                            </div>
+                            <div class="p-2 bg-neon-purple bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neon-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656.126-1.283.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-neon-green flex items-center text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                </svg>
+                                5.7%
+                            </span>
+                            <span class="text-cyber-gray text-sm ml-2">较上周</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 转化率卡片 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm text-cyber-gray">转化率</p>
+                                <h3 class="text-3xl font-orbitron font-bold neon-text mt-1">24.8%</h3>
+                            </div>
+                            <div class="p-2 bg-neon-pink bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-neon-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-neon-pink flex items-center text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                                1.2%
+                            </span>
+                            <span class="text-cyber-gray text-sm ml-2">较上周</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 销售趋势图表 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <h3 class="font-orbitron text-lg mb-4">销售趋势</h3>
+                        <div class="chart-container">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品类别分布图表 -->
+                    <div class="cyber-card p-6 rounded-md">
+                        <h3 class="font-orbitron text-lg mb-4">产品类别分布</h3>
+                        <div class="chart-container">
+                            <canvas id="categoriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 最近订单 -->
+                <div class="cyber-card p-6 rounded-md mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-orbitron text-lg">最近订单</h3>
+                        <a href="#orders" class="text-neon-blue hover:underline text-sm">查看所有</a>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>订单号</th>
+                                    <th>客户</th>
+                                    <th>产品</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                    <th>日期</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8294</td>
+                                    <td>林小雨</td>
+                                    <td>霓虹追踪器手表 x1</td>
+                                    <td>¥1,299</td>
+                                    <td><span class="status-tag status-tag-success">已完成</span></td>
+                                    <td>2023-09-15 14:23</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8293</td>
+                                    <td>张未来</td>
+                                    <td>电子墨水夹克 x1, 数字身份手环 x2</td>
+                                    <td>¥2,197</td>
+                                    <td><span class="status-tag status-tag-pending">处理中</span></td>
+                                    <td>2023-09-15 13:47</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8292</td>
+                                    <td>陈星辰</td>
+                                    <td>量子投影帽 x1, 全息投影耳机 x1</td>
+                                    <td>¥1,498</td>
+                                    <td><span class="status-tag status-tag-pending">配送中</span></td>
+                                    <td>2023-09-15 10:12</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8291</td>
+                                    <td>王电子</td>
+                                    <td>像素艺术太阳镜 x3</td>
+                                    <td>¥1,377</td>
+                                    <td><span class="status-tag status-tag-danger">已取消</span></td>
+                                    <td>2023-09-15 09:05</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8290</td>
+                                    <td>李数据</td>
+                                    <td>全息投影背包 x1</td>
+                                    <td>¥899</td>
+                                    <td><span class="status-tag status-tag-success">已完成</span></td>
+                                    <td>2023-09-14 22:37</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 热销产品 -->
+                <div class="cyber-card p-6 rounded-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-orbitron text-lg">热销产品</h3>
+                        <a href="#products" class="text-neon-blue hover:underline text-sm">管理产品</a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- 产品 1 -->
+                        <div class="bg-cyber-darker p-4 rounded-md border border-neon-blue border-opacity-30">
+                            <div class="flex items-center mb-3">
+                                <div class="w-12 h-12 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                    <span class="font-orbitron text-neon-blue text-xs">热销</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-orbitron text-sm">霓虹追踪器手表</h4>
+                                    <p class="text-cyber-gray text-xs">SKU: NV-2481</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-neon-pink font-orbitron">¥1,299</span>
+                                <span class="text-cyber-gray text-sm">销量: 256</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 产品 2 -->
+                        <div class="bg-cyber-darker p-4 rounded-md border border-neon-blue border-opacity-30">
+                            <div class="flex items-center mb-3">
+                                <div class="w-12 h-12 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                    <span class="font-orbitron text-neon-pink text-xs">新品</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-orbitron text-sm">量子投影帽</h4>
+                                    <p class="text-cyber-gray text-xs">SKU: NV-1024</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-neon-blue font-orbitron">¥599</span>
+                                <span class="text-cyber-gray text-sm">销量: 182</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 产品 3 -->
+                        <div class="bg-cyber-darker p-4 rounded-md border border-neon-blue border-opacity-30">
+                            <div class="flex items-center mb-3">
+                                <div class="w-12 h-12 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                    <span class="font-orbitron text-neon-green text-xs">畅销</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-orbitron text-sm">电子墨水夹克</h4>
+                                    <p class="text-cyber-gray text-xs">SKU: NV-3328</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-neon-green font-orbitron">¥1,599</span>
+                                <span class="text-cyber-gray text-sm">销量: 143</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 产品 4 -->
+                        <div class="bg-cyber-darker p-4 rounded-md border border-neon-blue border-opacity-30">
+                            <div class="flex items-center mb-3">
+                                <div class="w-12 h-12 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                    <span class="font-orbitron text-neon-purple text-xs">限量</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-orbitron text-sm">像素艺术太阳镜</h4>
+                                    <p class="text-cyber-gray text-xs">SKU: NV-4096</p>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-neon-purple font-orbitron">¥459</span>
+                                <span class="text-cyber-gray text-sm">销量: 129</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 产品管理 -->
+            <div id="products-section" class="hidden p-6">
+                <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-orbitron font-bold neon-text-blue mb-2">产品管理</h2>
+                        <p class="text-cyber-gray">管理你的产品目录，添加新产品或修改现有产品。</p>
+                    </div>
+                    <button id="add-product-btn" class="cyber-button mt-4 md:mt-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        添加产品
+                    </button>
+                </div>
+                
+                <!-- 产品过滤和搜索 -->
+                <div class="cyber-card p-4 rounded-md mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="col-span-1 md:col-span-2 relative">
+                            <input type="text" class="cyber-search" placeholder="搜索产品...">
+                            <span class="cyber-search-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div>
+                            <select class="cyber-select w-full">
+                                <option value="">所有类别</option>
+                                <option value="accessories">配件</option>
+                                <option value="clothing">服饰</option>
+                                <option value="tech">科技</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select class="cyber-select w-full">
+                                <option value="">所有状态</option>
+                                <option value="active">上架中</option>
+                                <option value="draft">草稿</option>
+                                <option value="out_of_stock">缺货</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 产品列表 -->
+                <div class="cyber-card p-6 rounded-md">
+                    <div class="overflow-x-auto">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>产品信息</th>
+                                    <th>SKU</th>
+                                    <th>库存</th>
+                                    <th>价格</th>
+                                    <th>类别</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                                <span class="font-orbitron text-neon-blue text-xs">IMG</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-rajdhani">霓虹追踪器手表</h4>
+                                                <p class="text-cyber-gray text-xs">智能穿戴设备</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-orbitron text-sm">NV-2481</td>
+                                    <td>124</td>
+                                    <td class="font-orbitron text-neon-pink">¥1,299</td>
+                                    <td>科技</td>
+                                    <td><span class="status-tag status-tag-success">上架中</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="编辑">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-green transition-colors" title="查看">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="删除">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                                <span class="font-orbitron text-neon-pink text-xs">IMG</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-rajdhani">量子投影帽</h4>
+                                                <p class="text-cyber-gray text-xs">智能穿戴</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-orbitron text-sm">NV-1024</td>
+                                    <td>76</td>
+                                    <td class="font-orbitron text-neon-blue">¥599</td>
+                                    <td>配件</td>
+                                    <td><span class="status-tag status-tag-success">上架中</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="编辑">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-green transition-colors" title="查看">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="删除">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                                <span class="font-orbitron text-neon-green text-xs">IMG</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-rajdhani">电子墨水夹克</h4>
+                                                <p class="text-cyber-gray text-xs">智能服饰</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-orbitron text-sm">NV-3328</td>
+                                    <td>0</td>
+                                    <td class="font-orbitron text-neon-green">¥1,599</td>
+                                    <td>服饰</td>
+                                    <td><span class="status-tag status-tag-danger">缺货</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="编辑">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-green transition-colors" title="查看">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="删除">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                                <span class="font-orbitron text-neon-purple text-xs">IMG</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-rajdhani">像素艺术太阳镜</h4>
+                                                <p class="text-cyber-gray text-xs">智能穿戴</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-orbitron text-sm">NV-4096</td>
+                                    <td>42</td>
+                                    <td class="font-orbitron text-neon-purple">¥459</td>
+                                    <td>配件</td>
+                                    <td><span class="status-tag status-tag-success">上架中</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="编辑">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-green transition-colors" title="查看">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="删除">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-cyber-dark rounded-md flex items-center justify-center mr-3">
+                                                <span class="font-orbitron text-neon-blue text-xs">IMG</span>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-rajdhani">全息投影背包</h4>
+                                                <p class="text-cyber-gray text-xs">智能配件</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="font-orbitron text-sm">NV-5120</td>
+                                    <td>18</td>
+                                    <td class="font-orbitron text-neon-blue">¥899</td>
+                                    <td>配件</td>
+                                    <td><span class="status-tag status-tag-pending">草稿</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="编辑">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-green transition-colors" title="查看">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                            <button class="p-1 text-neon-blue hover:text-neon-pink transition-colors" title="删除">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div class="flex justify-between items-center mt-6">
+                        <div class="text-cyber-gray text-sm">显示 1 至 5，共 23 项</div>
+                        <div class="flex space-x-2">
+                            <button class="cyber-button text-sm py-1 px-2 opacity-50 cursor-not-allowed">上一页</button>
+                            <button class="cyber-button text-sm py-1 px-2 bg-neon-blue text-cyber-dark">1</button>
+                            <button class="cyber-button text-sm py-1 px-2">2</button>
+                            <button class="cyber-button text-sm py-1 px-2">3</button>
+                            <button class="cyber-button text-sm py-1 px-2">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 订单管理 -->
+            <div id="orders-section" class="hidden p-6">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-orbitron font-bold neon-text-blue mb-2">订单管理</h2>
+                    <p class="text-cyber-gray">查看和管理客户订单，处理退款和发货。</p>
+                </div>
+                
+                <!-- 订单过滤和搜索 -->
+                <div class="cyber-card p-4 rounded-md mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="col-span-1 md:col-span-2 relative">
+                            <input type="text" class="cyber-search" placeholder="搜索订单号或客户...">
+                            <span class="cyber-search-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div>
+                            <select class="cyber-select w-full">
+                                <option value="">所有状态</option>
+                                <option value="completed">已完成</option>
+                                <option value="processing">处理中</option>
+                                <option value="shipped">配送中</option>
+                                <option value="cancelled">已取消</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select class="cyber-select w-full">
+                                <option value="">所有日期</option>
+                                <option value="today">今天</option>
+                                <option value="week">本周</option>
+                                <option value="month">本月</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 订单状态卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="cyber-card p-4 rounded-md">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-cyber-gray">待处理</p>
+                                <h3 class="text-xl font-orbitron font-bold neon-text-blue mt-1">12</h3>
+                            </div>
+                            <div class="p-2 bg-neon-blue bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cyber-card p-4 rounded-md">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-cyber-gray">配送中</p>
+                                <h3 class="text-xl font-orbitron font-bold neon-text-green mt-1">8</h3>
+                            </div>
+                            <div class="p-2 bg-neon-green bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cyber-card p-4 rounded-md">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-cyber-gray">已完成</p>
+                                <h3 class="text-xl font-orbitron font-bold neon-text-purple mt-1">124</h3>
+                            </div>
+                            <div class="p-2 bg-neon-purple bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="cyber-card p-4 rounded-md">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-cyber-gray">已取消</p>
+                                <h3 class="text-xl font-orbitron font-bold neon-text mt-1">6</h3>
+                            </div>
+                            <div class="p-2 bg-neon-pink bg-opacity-10 rounded-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 订单列表 -->
+                <div class="cyber-card p-6 rounded-md">
+                    <div class="overflow-x-auto">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>订单号</th>
+                                    <th>客户</th>
+                                    <th>日期</th>
+                                    <th>商品</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8294</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-neon-blue rounded-full overflow-hidden flex items-center justify-center mr-2">
+                                                <span class="font-orbitron text-cyber-darker">L</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-rajdhani">林小雨</p>
+                                                <p class="text-cyber-gray text-xs">user@example.com</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2023-09-15 14:23</td>
+                                    <td>霓虹追踪器手表 x1</td>
+                                    <td class="font-orbitron">¥1,299</td>
+                                    <td><span class="status-tag status-tag-success">已完成</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="cyber-button text-xs py-1 px-2">查看详情</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8293</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-neon-pink rounded-full overflow-hidden flex items-center justify-center mr-2">
+                                                <span class="font-orbitron text-cyber-darker">Z</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-rajdhani">张未来</p>
+                                                <p class="text-cyber-gray text-xs">user2@example.com</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2023-09-15 13:47</td>
+                                    <td>电子墨水夹克 x1, 数字身份手环 x2</td>
+                                    <td class="font-orbitron">¥2,197</td>
+                                    <td><span class="status-tag status-tag-pending">处理中</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="cyber-button text-xs py-1 px-2">查看详情</button>
+                                            <button class="cyber-button cyber-button-green text-xs py-1 px-2">发货</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8292</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-neon-green rounded-full overflow-hidden flex items-center justify-center mr-2">
+                                                <span class="font-orbitron text-cyber-darker">C</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-rajdhani">陈星辰</p>
+                                                <p class="text-cyber-gray text-xs">user3@example.com</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2023-09-15 10:12</td>
+                                    <td>量子投影帽 x1, 全息投影耳机 x1</td>
+                                    <td class="font-orbitron">¥1,498</td>
+                                    <td><span class="status-tag status-tag-pending">配送中</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="cyber-button text-xs py-1 px-2">查看详情</button>
+                                            <button class="cyber-button cyber-button-purple text-xs py-1 px-2">跟踪</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8291</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-neon-purple rounded-full overflow-hidden flex items-center justify-center mr-2">
+                                                <span class="font-orbitron text-cyber-darker">W</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-rajdhani">王电子</p>
+                                                <p class="text-cyber-gray text-xs">user4@example.com</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2023-09-15 09:05</td>
+                                    <td>像素艺术太阳镜 x3</td>
+                                    <td class="font-orbitron">¥1,377</td>
+                                    <td><span class="status-tag status-tag-danger">已取消</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="cyber-button text-xs py-1 px-2">查看详情</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="font-orbitron">#NV-8290</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-neon-blue rounded-full overflow-hidden flex items-center justify-center mr-2">
+                                                <span class="font-orbitron text-cyber-darker">L</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-rajdhani">李数据</p>
+                                                <p class="text-cyber-gray text-xs">user5@example.com</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2023-09-14 22:37</td>
+                                    <td>全息投影背包 x1</td>
+                                    <td class="font-orbitron">¥899</td>
+                                    <td><span class="status-tag status-tag-success">已完成</span></td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <button class="cyber-button text-xs py-1 px-2">查看详情</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页 -->
+                    <div class="flex justify-between items-center mt-6">
+                        <div class="text-cyber-gray text-sm">显示 1 至 5，共 150 项</div>
+                        <div class="flex space-x-2">
+                            <button class="cyber-button text-sm py-1 px-2 opacity-50 cursor-not-allowed">上一页</button>
+                            <button class="cyber-button text-sm py-1 px-2 bg-neon-blue text-cyber-dark">1</button>
+                            <button class="cyber-button text-sm py-1 px-2">2</button>
+                            <button class="cyber-button text-sm py-1 px-2">3</button>
+                            <button class="cyber-button text-sm py-1 px-2">...</button>
+                            <button class="cyber-button text-sm py-1 px-2">30</button>
+                            <button class="cyber-button text-sm py-1 px-2">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 添加产品模态框 (默认隐藏) -->
+    <div id="add-product-modal" class="modal-backdrop hidden">
+        <div class="modal-content p-6 rounded-md max-w-3xl w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-orbitron text-xl neon-text-blue">添加新产品</h3>
+                <button id="close-product-modal" class="text-cyber-gray hover:text-neon-pink">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <form>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-cyber-gray mb-2">产品名称</label>
+                        <input type="text" class="cyber-input w-full" placeholder="输入产品名称">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-gray mb-2">SKU</label>
+                        <input type="text" class="cyber-input w-full" placeholder="例如：NV-1234">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-gray mb-2">类别</label>
+                        <select class="cyber-select w-full">
+                            <option value="">选择类别</option>
+                            <option value="accessories">配件</option>
+                            <option value="clothing">服饰</option>
+                            <option value="tech">科技</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-cyber-gray mb-2">价格 (¥)</label>
+                        <input type="number" class="cyber-input w-full" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-gray mb-2">库存数量</label>
+                        <input type="number" class="cyber-input w-full" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-cyber-gray mb-2">状态</label>
+                        <select class="cyber-select w-full">
+                            <option value="active">上架中</option>
+                            <option value="draft">草稿</option>
+                            <option value="out_of_stock">缺货</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-cyber-gray mb-2">产品描述</label>
+                    <textarea class="cyber-input w-full h-32" placeholder="输入产品描述..."></textarea>
+                </div>
+                
+                <div class="mb-6">
+                    <label class="block text-cyber-gray mb-2">产品图片</label>
+                    <div class="border-2 border-dashed border-neon-blue border-opacity-50 rounded-md p-6 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-cyber-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="mt-2 text-sm text-cyber-gray">拖拽文件到此处或</p>
+                        <button type="button" class="mt-2 cyber-button text-sm py-1">浏览文件</button>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-product" class="cyber-button cyber-button-pink">取消</button>
+                    <button type="button" class="cyber-button cyber-button-green">保存产品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化WebGL背景
+            initWebGLBackground();
+            
+            // 初始化侧边栏交互
+            initSidebar();
+            
+            // 初始化图表
+            initCharts();
+            
+            // 初始化模态框
+            initModals();
+            
+            // 初始化时间显示
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 显示默认页面（仪表盘）
+            showSection('dashboard');
+        });
+        
+        // WebGL 背景动画
+        function initWebGLBackground() {
+            const canvas = document.getElementById('bg-canvas');
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                alpha: true
+            });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 3;
+            
+            // 创建网格几何体
+            const gridHelper = new THREE.GridHelper(20, 20, 0x05D9E8, 0x05D9E8);
+            gridHelper.position.y = -1;
+            scene.add(gridHelper);
+            
+            // 创建粒子系统
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 500;
+            
+            const posArray = new Float32Array(particlesCount * 3);
+            
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 10;
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.01,
+                color: 0x05D9E8,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+            
+            // 响应窗口调整大小
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // 动画函数
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // 旋转粒子系统
+                particlesMesh.rotation.x += 0.0001;
+                particlesMesh.rotation.y += 0.0002;
+                
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+        }
+        
+        // 侧边栏交互
+        function initSidebar() {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+            
+            // 侧边栏切换
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('open');
+                });
+            }
+            
+            // 导航链接点击
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // 移除所有活跃状态
+                    sidebarLinks.forEach(l => l.classList.remove('sidebar-item-active'));
+                    
+                    // 添加活跃状态到点击的链接
+                    link.classList.add('sidebar-item-active');
+                    
+                    // 获取要显示的部分ID
+                    const targetId = link.getAttribute('href').substring(1);
+                    showSection(targetId);
+                    
+                    // 在移动端关闭侧边栏
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+        }
+        
+        // 图表初始化
+        function initCharts() {
+            // 销售趋势图表
+            const salesChart = document.getElementById('salesChart');
+            if (salesChart) {
+                const salesCtx = salesChart.getContext('2d');
+                
+                // 创建渐变
+                const gradientFill = salesCtx.createLinearGradient(0, 0, 0, 300);
+                gradientFill.addColorStop(0, 'rgba(5, 217, 232, 0.3)');
+                gradientFill.addColorStop(0.8, 'rgba(5, 217, 232, 0.0)');
+                
+                new Chart(salesCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                        datasets: [{
+                            label: '销售额',
+                            data: [8500, 7200, 10500, 9300, 12000, 15000, 13500],
+                            borderColor: '#05D9E8',
+                            backgroundColor: gradientFill,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#05D9E8',
+                            pointBorderColor: '#05D9E8',
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#010117',
+                                titleColor: '#05D9E8',
+                                bodyColor: '#fff',
+                                borderColor: '#05D9E8',
+                                borderWidth: 1,
+                                padding: 12,
+                                titleFont: {
+                                    family: 'Orbitron'
+                                },
+                                bodyFont: {
+                                    family: 'Rajdhani'
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        return `¥ ${context.raw.toLocaleString()}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(5, 217, 232, 0.1)',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#BFC0C0',
+                                    font: {
+                                        family: 'Rajdhani'
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(5, 217, 232, 0.1)',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#BFC0C0',
+                                    font: {
+                                        family: 'Rajdhani'
+                                    },
+                                    callback: function(value) {
+                                        if (value >= 1000) {
+                                            return '¥' + value / 1000 + 'k';
+                                        }
+                                        return '¥' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 产品类别分布图表
+            const categoriesChart = document.getElementById('categoriesChart');
+            if (categoriesChart) {
+                const categoriesCtx = categoriesChart.getContext('2d');
+                
+                new Chart(categoriesCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['科技', '配件', '服饰'],
+                        datasets: [{
+                            data: [45, 30, 25],
+                            backgroundColor: [
+                                '#05D9E8',
+                                '#FF2A6D',
+                                '#39FF14'
+                            ],
+                            borderWidth: 0,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#BFC0C0',
+                                    font: {
+                                        family: 'Rajdhani'
+                                    },
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#010117',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: '#05D9E8',
+                                borderWidth: 1,
+                                padding: 12,
+                                bodyFont: {
+                                    family: 'Rajdhani'
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 模态框初始化
+        function initModals() {
+            // 添加产品模态框
+            const addProductBtn = document.getElementById('add-product-btn');
+            const addProductModal = document.getElementById('add-product-modal');
+            const closeProductModal = document.getElementById('close-product-modal');
+            const cancelProduct = document.getElementById('cancel-product');
+            
+            if (addProductBtn && addProductModal) {
+                addProductBtn.addEventListener('click', () => {
+                    addProductModal.classList.remove('hidden');
+                });
+                
+                if (closeProductModal) {
+                    closeProductModal.addEventListener('click', () => {
+                        addProductModal.classList.add('hidden');
+                    });
+                }
+                
+                if (cancelProduct) {
+                    cancelProduct.addEventListener('click', () => {
+                        addProductModal.classList.add('hidden');
+                    });
+                }
+            }
+        }
+        
+        // 更新时间显示
+        function updateTime() {
+            const timeElement = document.getElementById('time');
+            if (timeElement) {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                
+                timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        // 显示特定的部分
+        function showSection(sectionId) {
+            // 隐藏所有部分
+            const sections = document.querySelectorAll('main > div');
+            sections.forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // 显示目标部分
+            const targetSection = document.getElementById(`${sectionId}-section`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

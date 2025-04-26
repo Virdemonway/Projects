@@ -1,0 +1,1721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonVerse | 赛博朋克电商体验</title>
+    <!-- 字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP - 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <!-- Three.js for WebGL -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/ShaderPass.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif']
+                    },
+                    colors: {
+                        neon: {
+                            pink: '#FF2A6D',
+                            blue: '#05D9E8',
+                            purple: '#9D4EDD',
+                            green: '#39FF14',
+                            yellow: '#F7FD04'
+                        },
+                        cyber: {
+                            dark: '#01012B',
+                            darker: '#010117',
+                            black: '#000004',
+                            gray: '#BFC0C0',
+                            light: '#DEDEDE'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glitch': 'glitch 2s linear infinite',
+                        'scanline': 'scanline 6s linear infinite',
+                        'text-flicker': 'textFlicker 0.08s infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        glitch: {
+                            '0%, 100%': { transform: 'translate(0)' },
+                            '20%': { transform: 'translate(-3px, 3px)' },
+                            '40%': { transform: 'translate(-3px, -3px)' },
+                            '60%': { transform: 'translate(3px, 3px)' },
+                            '80%': { transform: 'translate(3px, -3px)' }
+                        },
+                        scanline: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' }
+                        },
+                        textFlicker: {
+                            '0%': { opacity: '0.1' },
+                            '2%': { opacity: '1' },
+                            '8%': { opacity: '0.1' },
+                            '9%': { opacity: '1' },
+                            '12%': { opacity: '0.1' },
+                            '20%': { opacity: '1' },
+                            '25%': { opacity: '0.3' },
+                            '30%': { opacity: '1' },
+                            '100%': { opacity: '1' },
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        /* 基本样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: #01012B;
+            color: #DEDEDE;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            height: 100%;
+        }
+        
+        /* WebGL 背景 */
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* 霓虹效果 */
+        .neon-text {
+            text-shadow: 
+                0 0 5px #FF2A6D,
+                0 0 10px #FF2A6D,
+                0 0 20px #FF2A6D,
+                0 0 40px #FF2A6D;
+        }
+        
+        .neon-text-blue {
+            text-shadow: 
+                0 0 5px #05D9E8,
+                0 0 10px #05D9E8,
+                0 0 20px #05D9E8,
+                0 0 40px #05D9E8;
+        }
+        
+        .neon-text-green {
+            text-shadow: 
+                0 0 5px #39FF14,
+                0 0 10px #39FF14,
+                0 0 20px #39FF14,
+                0 0 40px #39FF14;
+        }
+        
+        .neon-text-purple {
+            text-shadow: 
+                0 0 5px #9D4EDD,
+                0 0 10px #9D4EDD,
+                0 0 20px #9D4EDD,
+                0 0 40px #9D4EDD;
+        }
+        
+        .neon-box {
+            box-shadow: 
+                0 0 5px #FF2A6D,
+                0 0 10px #FF2A6D,
+                0 0 20px #FF2A6D;
+        }
+        
+        .neon-box-blue {
+            box-shadow: 
+                0 0 5px #05D9E8,
+                0 0 10px #05D9E8,
+                0 0 20px #05D9E8;
+        }
+        
+        .neon-box-green {
+            box-shadow: 
+                0 0 5px #39FF14,
+                0 0 10px #39FF14,
+                0 0 20px #39FF14;
+        }
+        
+        .neon-box-purple {
+            box-shadow: 
+                0 0 5px #9D4EDD,
+                0 0 10px #9D4EDD,
+                0 0 20px #9D4EDD;
+        }
+        
+        .neon-border {
+            position: relative;
+        }
+        
+        .neon-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid #FF2A6D;
+            box-shadow: 0 0 10px #FF2A6D, inset 0 0 10px #FF2A6D;
+            z-index: -1;
+        }
+        
+        .neon-border-blue::before {
+            border-color: #05D9E8;
+            box-shadow: 0 0 10px #05D9E8, inset 0 0 10px #05D9E8;
+        }
+        
+        .neon-border-green::before {
+            border-color: #39FF14;
+            box-shadow: 0 0 10px #39FF14, inset 0 0 10px #39FF14;
+        }
+        
+        .neon-border-purple::before {
+            border-color: #9D4EDD;
+            box-shadow: 0 0 10px #9D4EDD, inset 0 0 10px #9D4EDD;
+        }
+        
+        /* 毛刺效果 */
+        .glitch {
+            position: relative;
+        }
+        
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .glitch::before {
+            animation: glitch-animation 2s infinite linear alternate-reverse;
+            clip: rect(44px, 450px, 56px, 0);
+            left: 2px;
+            text-shadow: -1px 0 #FF2A6D;
+            background: transparent;
+        }
+        
+        .glitch::after {
+            animation: glitch-animation 3s infinite linear alternate-reverse;
+            clip: rect(24px, 450px, 36px, 0);
+            left: -2px;
+            text-shadow: 1px 0 #05D9E8;
+            background: transparent;
+        }
+        
+        @keyframes glitch-animation {
+            0% { clip: rect(27px, 9999px, 54px, 0); }
+            5% { clip: rect(9px, 9999px, 59px, 0); }
+            10% { clip: rect(62px, 9999px, 93px, 0); }
+            15% { clip: rect(33px, 9999px, 19px, 0); }
+            20% { clip: rect(89px, 9999px, 79px, 0); }
+            25% { clip: rect(74px, 9999px, 82px, 0); }
+            30% { clip: rect(107px, 9999px, 22px, 0); }
+            35% { clip: rect(24px, 9999px, 12px, 0); }
+            40% { clip: rect(119px, 9999px, 44px, 0); }
+            45% { clip: rect(91px, 9999px, 9px, 0); }
+            50% { clip: rect(38px, 9999px, 71px, 0); }
+            55% { clip: rect(73px, 9999px, 82px, 0); }
+            60% { clip: rect(22px, 9999px, 48px, 0); }
+            65% { clip: rect(67px, 9999px, 23px, 0); }
+            70% { clip: rect(14px, 9999px, 96px, 0); }
+            75% { clip: rect(97px, 9999px, 32px, 0); }
+            80% { clip: rect(53px, 9999px, 64px, 0); }
+            85% { clip: rect(45px, 9999px, 56px, 0); }
+            90% { clip: rect(82px, 9999px, 102px, 0); }
+            95% { clip: rect(15px, 9999px, 49px, 0); }
+            100% { clip: rect(37px, 9999px, 73px, 0); }
+        }
+        
+        /* 扫描线效果 */
+        .scanline {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scanline::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(to bottom, 
+                rgba(255, 42, 109, 0) 0%,
+                rgba(255, 42, 109, 0.2) 50%, 
+                rgba(255, 42, 109, 0) 100%);
+            animation: scanline 3s linear infinite;
+        }
+        
+        /* 按钮悬停效果 */
+        .cyber-button {
+            position: relative;
+            color: #05D9E8;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            background: transparent;
+            border: 2px solid #05D9E8;
+            border-radius: 0;
+            padding: 0.6em 2em;
+            transition: all 0.2s;
+            overflow: hidden;
+            box-shadow: 0 0 10px #05D9E8;
+            cursor: pointer;
+        }
+        
+        .cyber-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to right,
+                rgba(5, 217, 232, 0) 0%,
+                rgba(5, 217, 232, 0.4) 50%,
+                rgba(5, 217, 232, 0) 100%
+            );
+            transform: rotate(30deg);
+            transition: transform 0.5s;
+        }
+        
+        .cyber-button:hover {
+            color: #000;
+            background: #05D9E8;
+            box-shadow: 0 0 15px #05D9E8;
+        }
+        
+        .cyber-button:hover::after {
+            transform: rotate(30deg) translateX(100%);
+        }
+        
+        /* 产品卡片样式 */
+        .product-card {
+            position: relative;
+            overflow: hidden;
+            background: rgba(1, 1, 43, 0.7);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #FF2A6D, #05D9E8, #39FF14, #9D4EDD);
+            z-index: -1;
+            animation: border-animation 3s linear infinite;
+        }
+        
+        @keyframes border-animation {
+            0% { background-position: 0 0; }
+            50% { background-position: 100% 0; }
+            100% { background-position: 0 0; }
+        }
+        
+        /* 购物车动画 */
+        .cart-item-enter {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        
+        .cart-item-enter-active {
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 300ms, transform 300ms;
+        }
+        
+        .cart-item-exit {
+            opacity: 1;
+        }
+        
+        .cart-item-exit-active {
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: opacity 300ms, transform 300ms;
+        }
+        
+        /* 搜索框样式 */
+        .cyber-search {
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #05D9E8;
+            color: #DEDEDE;
+            padding: 0.5em 1em;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px #05D9E8;
+            transition: all 0.3s;
+        }
+        
+        .cyber-search:focus {
+            border-color: #FF2A6D;
+            box-shadow: 0 0 10px #FF2A6D;
+            outline: none;
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #01012B;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #05D9E8;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF2A6D;
+        }
+        
+        /* 加载器 */
+        .cyber-loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid transparent;
+            border-top: 4px solid #FF2A6D;
+            border-right: 4px solid #05D9E8;
+            border-bottom: 4px solid #39FF14;
+            border-left: 4px solid #9D4EDD;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 减轻动画选项 */
+        .reduced-motion * {
+            animation: none !important;
+            transition: none !important;
+        }
+        
+        /* 3D 产品视图容器 */
+        .product-3d-view {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            perspective: 1000px;
+        }
+        
+        /* 根据滚动的视差效果 */
+        .parallax-section {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .parallax-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transform: translateZ(-1px) scale(2);
+            z-index: -1;
+        }
+        
+        /* 导航菜单 */
+        .cyber-nav {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* 产品图像悬停效果 */
+        .product-image {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+        
+        /* 倒计时样式 */
+        .countdown {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+        
+        /* 电子邮件订阅表单 */
+        .cyber-input {
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #9D4EDD;
+            color: #DEDEDE;
+            padding: 0.8em 1.2em;
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px #9D4EDD;
+            transition: all 0.3s;
+        }
+        
+        .cyber-input:focus {
+            border-color: #FF2A6D;
+            box-shadow: 0 0 10px #FF2A6D;
+            outline: none;
+        }
+        
+        /* 社交媒体图标 */
+        .social-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(1, 1, 43, 0.5);
+            border: 1px solid #05D9E8;
+            transition: all 0.3s;
+        }
+        
+        .social-icon:hover {
+            transform: translateY(-5px);
+            border-color: #FF2A6D;
+            box-shadow: 0 0 10px #FF2A6D;
+        }
+        
+        /* 故障线条效果 */
+        .glitch-line {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .glitch-line::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(5, 217, 232, 0.1) 0.5%,
+                transparent 1%
+            );
+            pointer-events: none;
+        }
+        
+        /* 标签元素 */
+        .cyber-tag {
+            display: inline-block;
+            padding: 0.2em 0.8em;
+            font-size: 0.75rem;
+            font-family: 'Orbitron', sans-serif;
+            background: #FF2A6D;
+            color: #01012B;
+            transform: skew(-10deg);
+            box-shadow: 0 0 5px #FF2A6D;
+        }
+        
+        .cyber-tag-blue {
+            background: #05D9E8;
+            box-shadow: 0 0 5px #05D9E8;
+        }
+        
+        .cyber-tag-green {
+            background: #39FF14;
+            box-shadow: 0 0 5px #39FF14;
+        }
+        
+        .cyber-tag-purple {
+            background: #9D4EDD;
+            box-shadow: 0 0 5px #9D4EDD;
+        }
+    </style>
+</head>
+<body>
+    <!-- WebGL 背景画布 -->
+    <canvas id="bg-canvas"></canvas>
+    
+    <!-- 导航栏 -->
+    <header class="cyber-nav fixed top-0 left-0 w-full z-50 bg-cyber-darker bg-opacity-70">
+        <div class="container mx-auto px-4 md:px-6 py-4">
+            <div class="flex justify-between items-center">
+                <a href="#" class="flex items-center">
+                    <div class="relative mr-3">
+                        <div class="w-8 h-8 bg-neon-pink rounded-sm transform rotate-45 neon-box"></div>
+                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-cyber-darker font-orbitron font-bold text-xl">N</div>
+                    </div>
+                    <h1 class="font-orbitron font-bold text-xl md:text-2xl glitch neon-text-blue" data-text="NEONVERSE">NEONVERSE</h1>
+                </a>
+                
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#products" class="font-rajdhani text-lg hover:text-neon-pink transition-colors">商品</a>
+                    <a href="#collections" class="font-rajdhani text-lg hover:text-neon-blue transition-colors">系列</a>
+                    <a href="#special" class="font-rajdhani text-lg hover:text-neon-green transition-colors">限定</a>
+                    <a href="#about" class="font-rajdhani text-lg hover:text-neon-purple transition-colors">关于</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button class="relative p-2 hover:text-neon-pink">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                    <button id="cart-btn" class="relative p-2 hover:text-neon-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span id="cart-count" class="absolute -top-1 -right-1 bg-neon-pink text-cyber-dark text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center neon-box">0</span>
+                    </button>
+                    <button id="mobile-menu-btn" class="md:hidden p-2 hover:text-neon-green">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <button id="reduce-motion-btn" class="p-2 hover:text-neon-purple" title="减少动画效果">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单 (默认隐藏) -->
+            <div id="mobile-menu" class="md:hidden hidden pt-4">
+                <div class="flex flex-col space-y-3 p-2 border border-neon-blue rounded neon-box-blue bg-cyber-dark bg-opacity-90">
+                    <a href="#products" class="font-rajdhani text-lg py-2 px-4 hover:bg-neon-blue hover:text-cyber-dark transition-colors rounded">商品</a>
+                    <a href="#collections" class="font-rajdhani text-lg py-2 px-4 hover:bg-neon-blue hover:text-cyber-dark transition-colors rounded">系列</a>
+                    <a href="#special" class="font-rajdhani text-lg py-2 px-4 hover:bg-neon-blue hover:text-cyber-dark transition-colors rounded">限定</a>
+                    <a href="#about" class="font-rajdhani text-lg py-2 px-4 hover:bg-neon-blue hover:text-cyber-dark transition-colors rounded">关于</a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 购物车侧边栏 (默认隐藏) -->
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full md:w-96 bg-cyber-darker bg-opacity-95 transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-orbitron text-xl neon-text-blue">你的购物车</h2>
+                <button id="close-cart" class="p-2 hover:text-neon-pink">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="cart-items" class="space-y-4 mb-6">
+                <!-- 购物车为空显示 -->
+                <div id="empty-cart" class="text-center py-8">
+                    <p class="text-cyber-gray mb-4">购物车是空的</p>
+                    <button class="cyber-button" onclick="document.getElementById('cart-sidebar').classList.add('translate-x-full')">
+                        继续购物
+                    </button>
+                </div>
+                
+                <!-- 购物车商品将在这里动态添加 -->
+            </div>
+            
+            <div id="cart-summary" class="border-t border-neon-blue pt-4 hidden">
+                <div class="flex justify-between mb-2">
+                    <span>小计:</span>
+                    <span id="cart-subtotal">¥0.00</span>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <span>运费:</span>
+                    <span>免费</span>
+                </div>
+                <div class="flex justify-between mb-6 font-bold text-lg">
+                    <span>总计:</span>
+                    <span id="cart-total" class="neon-text-green">¥0.00</span>
+                </div>
+                
+                <button class="w-full cyber-button mb-4">
+                    结账
+                </button>
+                
+                <p class="text-sm text-cyber-gray text-center">我们接受多种支付方式，包括信用卡、支付宝和微信支付。</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 主区域内容 -->
+    <main class="pt-20">
+        <!-- 英雄区域 -->
+        <section class="py-20 md:py-32 relative overflow-hidden">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="relative z-10">
+                        <div class="mb-4 transform rotate-3">
+                            <span class="cyber-tag">2088 新品</span>
+                        </div>
+                        <h1 class="font-orbitron text-4xl md:text-6xl font-bold mb-4 glitch neon-text" data-text="超越现实">超越现实<span class="text-neon-blue">.</span></h1>
+                        <p class="font-rajdhani text-xl mb-8 max-w-lg">
+                            探索我们的赛博朋克系列，体验现实与虚拟的完美融合。这不仅仅是服装，而是一种生活方式。
+                        </p>
+                        <div class="flex flex-wrap gap-4">
+                            <a href="#products" class="cyber-button">
+                                探索系列
+                            </a>
+                            <a href="#special" class="cyber-button" style="color: #FF2A6D; border-color: #FF2A6D; box-shadow: 0 0 10px #FF2A6D;">
+                                限时优惠
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="relative animate-float">
+                        <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue opacity-20 rounded-xl"></div>
+                        <img src="https://images.unsplash.com/photo-1583558391-0fa4f4f812b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800" alt="赛博朋克夹克" class="relative z-10 rounded-xl shadow-2xl transform rotate-3" />
+                        <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-neon-pink rounded-full blur-xl opacity-60"></div>
+                        <div class="absolute -top-4 -left-4 w-20 h-20 bg-neon-blue rounded-full blur-xl opacity-60"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 装饰线条 -->
+            <div class="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-neon-pink via-neon-blue to-neon-green"></div>
+            
+            <!-- 滚动提示 -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center animate-bounce">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mx-auto text-neon-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span class="font-rajdhani text-sm">向下滚动</span>
+            </div>
+        </section>
+        
+        <!-- 特色类别 -->
+        <section class="py-16 relative">
+            <div class="container mx-auto px-4 md:px-6">
+                <h2 class="font-orbitron text-3xl font-bold mb-12 text-center neon-text-blue">探索<span class="neon-text-purple">类别</span></h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 类别 1 -->
+                    <div class="relative overflow-hidden rounded-xl shadow-lg group">
+                        <img src="https://images.unsplash.com/photo-1540202404-1b927e27fa8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=500" alt="赛博配件" class="w-full h-64 object-cover transform transition-transform duration-700 group-hover:scale-110" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-cyber-dark to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-6">
+                            <h3 class="font-orbitron text-2xl font-bold mb-2 neon-text-green">配件</h3>
+                            <p class="font-rajdhani mb-4 max-w-xs">增强你的个人风格，探索我们充满未来感的配件系列。</p>
+                            <a href="#" class="inline-block py-2 px-4 bg-neon-green text-cyber-dark font-orbitron text-sm transform hover:translate-x-2 transition-transform">
+                                查看 →
+                            </a>
+                        </div>
+                        <!-- 装饰元素 -->
+                        <div class="absolute top-4 right-4">
+                            <div class="w-12 h-1 bg-neon-green mb-1"></div>
+                            <div class="w-8 h-1 bg-neon-green"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 类别 2 -->
+                    <div class="relative overflow-hidden rounded-xl shadow-lg group">
+                        <img src="https://images.unsplash.com/photo-1519708495087-ca1b71df408c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=500" alt="霓虹服饰" class="w-full h-64 object-cover transform transition-transform duration-700 group-hover:scale-110" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-cyber-dark to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-6">
+                            <h3 class="font-orbitron text-2xl font-bold mb-2 neon-text">服饰</h3>
+                            <p class="font-rajdhani mb-4 max-w-xs">我们的服装融合了未来科技与街头风格，让你在城市中脱颖而出。</p>
+                            <a href="#" class="inline-block py-2 px-4 bg-neon-pink text-cyber-dark font-orbitron text-sm transform hover:translate-x-2 transition-transform">
+                                查看 →
+                            </a>
+                        </div>
+                        <!-- 装饰元素 -->
+                        <div class="absolute top-4 right-4">
+                            <div class="w-12 h-1 bg-neon-pink mb-1"></div>
+                            <div class="w-8 h-1 bg-neon-pink"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 类别 3 -->
+                    <div class="relative overflow-hidden rounded-xl shadow-lg group">
+                        <img src="https://images.unsplash.com/photo-1563656157432-67560b52e9fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=500" alt="科技小物" class="w-full h-64 object-cover transform transition-transform duration-700 group-hover:scale-110" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-cyber-dark to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 p-6">
+                            <h3 class="font-orbitron text-2xl font-bold mb-2 neon-text-blue">科技</h3>
+                            <p class="font-rajdhani mb-4 max-w-xs">结合艺术与功能，我们的科技产品既是实用工具，也是未来艺术品。</p>
+                            <a href="#" class="inline-block py-2 px-4 bg-neon-blue text-cyber-dark font-orbitron text-sm transform hover:translate-x-2 transition-transform">
+                                查看 →
+                            </a>
+                        </div>
+                        <!-- 装饰元素 -->
+                        <div class="absolute top-4 right-4">
+                            <div class="w-12 h-1 bg-neon-blue mb-1"></div>
+                            <div class="w-8 h-1 bg-neon-blue"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 热门产品 -->
+        <section id="products" class="py-16 relative">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="flex flex-wrap items-center justify-between mb-12">
+                    <h2 class="font-orbitron text-3xl font-bold neon-text-purple">热门<span class="neon-text">产品</span></h2>
+                    
+                    <div class="flex space-x-2 mt-4 md:mt-0">
+                        <button class="px-4 py-2 bg-neon-purple bg-opacity-20 hover:bg-opacity-40 rounded font-rajdhani transition-all active">全部</button>
+                        <button class="px-4 py-2 hover:bg-neon-purple hover:bg-opacity-20 rounded font-rajdhani transition-all">新品</button>
+                        <button class="px-4 py-2 hover:bg-neon-purple hover:bg-opacity-20 rounded font-rajdhani transition-all">畅销</button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- 产品 1 -->
+                    <div class="product-card rounded-xl p-4" data-id="1" data-name="量子投影帽" data-price="599">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag absolute top-2 left-2 z-10">新品</div>
+                            <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="量子投影帽" class="product-image w-full h-48 object-cover" />
+                            <button class="add-to-cart-btn absolute bottom-4 right-4 bg-neon-blue text-cyber-dark p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">量子投影帽</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="font-rajdhani text-lg neon-text-blue">¥599</span>
+                            <button class="add-to-cart px-3 py-1 bg-neon-blue bg-opacity-20 hover:bg-opacity-40 text-neon-blue rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品 2 -->
+                    <div class="product-card rounded-xl p-4" data-id="2" data-name="霓虹追踪器手表" data-price="1299">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag-blue absolute top-2 left-2 z-10">畅销</div>
+                            <img src="https://images.unsplash.com/photo-1617625802912-cde586faf331?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="霓虹追踪器手表" class="product-image w-full h-48 object-cover" />
+                            <button class="add-to-cart-btn absolute bottom-4 right-4 bg-neon-pink text-cyber-dark p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">霓虹追踪器手表</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="font-rajdhani text-lg neon-text-pink">¥1299</span>
+                            <button class="add-to-cart px-3 py-1 bg-neon-pink bg-opacity-20 hover:bg-opacity-40 text-neon-pink rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品 3 -->
+                    <div class="product-card rounded-xl p-4" data-id="3" data-name="全息投影背包" data-price="899">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="全息投影背包" class="product-image w-full h-48 object-cover" />
+                            <button class="add-to-cart-btn absolute bottom-4 right-4 bg-neon-green text-cyber-dark p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">全息投影背包</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="font-rajdhani text-lg neon-text-green">¥899</span>
+                            <button class="add-to-cart px-3 py-1 bg-neon-green bg-opacity-20 hover:bg-opacity-40 text-neon-green rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品 4 -->
+                    <div class="product-card rounded-xl p-4" data-id="4" data-name="像素艺术太阳镜" data-price="459">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag-purple absolute top-2 left-2 z-10">限量版</div>
+                            <img src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="像素艺术太阳镜" class="product-image w-full h-48 object-cover" />
+                            <button class="add-to-cart-btn absolute bottom-4 right-4 bg-neon-purple text-cyber-dark p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">像素艺术太阳镜</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="font-rajdhani text-lg neon-text-purple">¥459</span>
+                            <button class="add-to-cart px-3 py-1 bg-neon-purple bg-opacity-20 hover:bg-opacity-40 text-neon-purple rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-12">
+                    <a href="#" class="cyber-button">
+                        查看更多商品
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 特色产品展示 -->
+        <section id="collections" class="py-16 relative">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="font-orbitron text-3xl font-bold mb-6 neon-text">特色系列</h2>
+                        <h3 class="font-orbitron text-4xl font-bold mb-4 neon-text-blue">赛博格 X09</h3>
+                        <p class="font-rajdhani text-lg mb-6">
+                            我们最新的赛博格系列融合了未来科技与生活方式的完美结合。每件产品都由顶尖设计师精心打造，采用高级纳米材料，为你提供非凡的使用体验。
+                        </p>
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-center">
+                                <div class="w-2 h-2 bg-neon-blue rounded-full mr-3"></div>
+                                <span>增强现实界面控制</span>
+                            </li>
+                            <li class="flex items-center">
+                                <div class="w-2 h-2 bg-neon-blue rounded-full mr-3"></div>
+                                <span>量子能源核心供电</span>
+                            </li>
+                            <li class="flex items-center">
+                                <div class="w-2 h-2 bg-neon-blue rounded-full mr-3"></div>
+                                <span>智能生物反馈系统</span>
+                            </li>
+                        </ul>
+                        <a href="#" class="cyber-button">
+                            探索系列
+                        </a>
+                    </div>
+                    
+                    <div class="relative">
+                        <!-- 3D 产品查看容器 -->
+                        <div class="product-3d-view" id="product-3d-container">
+                            <!-- 3D 查看器将通过 JavaScript 加载 -->
+                            <!-- 备用图像 -->
+                            <img src="https://images.unsplash.com/photo-1559310278-18a9192d909f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=500" alt="赛博格 X09" class="w-full h-full object-cover rounded-xl" />
+                        </div>
+                        
+                        <!-- 装饰元素 -->
+                        <div class="absolute -bottom-5 -left-5 w-20 h-20">
+                            <div class="w-full h-full border-2 border-neon-blue rounded-xl transform rotate-10"></div>
+                        </div>
+                        <div class="absolute -top-5 -right-5 w-20 h-20">
+                            <div class="w-full h-full border-2 border-neon-pink rounded-xl transform -rotate-10"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 限时优惠 -->
+        <section id="special" class="py-16 relative bg-cyber-dark">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="text-center mb-12">
+                    <h2 class="font-orbitron text-3xl font-bold mb-4 neon-text-green">限时优惠</h2>
+                    <p class="font-rajdhani text-lg max-w-2xl mx-auto">抓紧时间，限量特价活动正在进行。错过今天，再等一年。</p>
+                </div>
+                
+                <div class="text-center mb-8">
+                    <div class="countdown inline-block bg-cyber-darker p-6 rounded-xl border-2 border-neon-green neon-box-green">
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="text-center">
+                                <div class="text-4xl font-bold text-neon-green" id="countdown-days">00</div>
+                                <div class="text-xs">天</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl font-bold text-neon-green" id="countdown-hours">00</div>
+                                <div class="text-xs">时</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl font-bold text-neon-green" id="countdown-minutes">00</div>
+                                <div class="text-xs">分</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-4xl font-bold text-neon-green" id="countdown-seconds">00</div>
+                                <div class="text-xs">秒</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 促销产品 1 -->
+                    <div class="product-card rounded-xl p-4" data-id="5" data-name="电子墨水夹克" data-price="1599" data-original-price="2999">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag-green absolute top-2 left-2 z-10">-47%</div>
+                            <img src="https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="电子墨水夹克" class="product-image w-full h-48 object-cover" />
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">电子墨水夹克</h3>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-rajdhani text-lg neon-text-green">¥1599</span>
+                                <span class="font-rajdhani text-sm line-through ml-2 text-cyber-gray">¥2999</span>
+                            </div>
+                            <button class="add-to-cart px-3 py-1 bg-neon-green bg-opacity-20 hover:bg-opacity-40 text-neon-green rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 促销产品 2 -->
+                    <div class="product-card rounded-xl p-4" data-id="6" data-name="全息投影耳机" data-price="899" data-original-price="1499">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag-green absolute top-2 left-2 z-10">-40%</div>
+                            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="全息投影耳机" class="product-image w-full h-48 object-cover" />
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">全息投影耳机</h3>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-rajdhani text-lg neon-text-green">¥899</span>
+                                <span class="font-rajdhani text-sm line-through ml-2 text-cyber-gray">¥1499</span>
+                            </div>
+                            <button class="add-to-cart px-3 py-1 bg-neon-green bg-opacity-20 hover:bg-opacity-40 text-neon-green rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 促销产品 3 -->
+                    <div class="product-card rounded-xl p-4" data-id="7" data-name="数字身份手环" data-price="299" data-original-price="599">
+                        <div class="relative mb-4 overflow-hidden rounded-lg">
+                            <div class="cyber-tag-green absolute top-2 left-2 z-10">-50%</div>
+                            <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400" alt="数字身份手环" class="product-image w-full h-48 object-cover" />
+                        </div>
+                        <h3 class="font-orbitron font-bold mb-2">数字身份手环</h3>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="font-rajdhani text-lg neon-text-green">¥299</span>
+                                <span class="font-rajdhani text-sm line-through ml-2 text-cyber-gray">¥599</span>
+                            </div>
+                            <button class="add-to-cart px-3 py-1 bg-neon-green bg-opacity-20 hover:bg-opacity-40 text-neon-green rounded font-rajdhani transition-all">
+                                加入购物车
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 客户评价 -->
+        <section class="py-16 relative">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="text-center mb-12">
+                    <h2 class="font-orbitron text-3xl font-bold mb-4 neon-text-purple">客户评价</h2>
+                    <p class="font-rajdhani text-lg max-w-2xl mx-auto">来看看我们的客户如何评价NeonVerse的产品和体验。</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 评价 1 -->
+                    <div class="bg-cyber-darker bg-opacity-70 p-6 rounded-xl backdrop-filter backdrop-blur-sm relative">
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-blue" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="font-rajdhani mb-6">"霓虹追踪器手表彻底改变了我的生活方式。不仅设计前卫，功能也非常强大。推荐给所有热爱科技的朋友！"</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-neon-blue rounded-full overflow-hidden mr-3">
+                                <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=100" alt="用户头像" class="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                                <div class="font-orbitron font-bold">林小雨</div>
+                                <div class="text-xs text-cyber-gray">购买了 霓虹追踪器手表</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 评价 2 -->
+                    <div class="bg-cyber-darker bg-opacity-70 p-6 rounded-xl backdrop-filter backdrop-blur-sm relative">
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-pink" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-pink" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-pink" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-pink" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyber-gray" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="font-rajdhani mb-6">"电子墨水夹克质量超乎想象，充电一次可以使用整整一周，而且图案可以随心所欲地更换，太酷了！"</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-neon-pink rounded-full overflow-hidden mr-3">
+                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=100" alt="用户头像" class="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                                <div class="font-orbitron font-bold">张未来</div>
+                                <div class="text-xs text-cyber-gray">购买了 电子墨水夹克</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 评价 3 -->
+                    <div class="bg-cyber-darker bg-opacity-70 p-6 rounded-xl backdrop-filter backdrop-blur-sm relative">
+                        <div class="mb-4">
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-neon-green" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="font-rajdhani mb-6">"量子投影帽是我买过最酷的东西，出门戴它总能引来无数目光。NeonVerse的客服也非常专业，解决了我的所有问题。"</p>
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-neon-green rounded-full overflow-hidden mr-3">
+                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=100" alt="用户头像" class="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                                <div class="font-orbitron font-bold">陈星辰</div>
+                                <div class="text-xs text-cyber-gray">购买了 量子投影帽</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 订阅区域 -->
+        <section class="py-16 relative bg-cyber-dark">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="max-w-3xl mx-auto text-center">
+                    <h2 class="font-orbitron text-3xl font-bold mb-4 neon-text">加入<span class="neon-text-blue">赛博革命</span></h2>
+                    <p class="font-rajdhani text-lg mb-8">订阅我们的通讯，获取最新产品信息、限时优惠和独家内容。</p>
+                    
+                    <form class="mb-6">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <input type="email" class="cyber-input flex-grow" placeholder="输入你的电子邮箱" required>
+                            <button type="submit" class="cyber-button">
+                                订阅
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <p class="text-sm text-cyber-gray">我们重视你的隐私，绝不会向第三方分享你的信息。你可以随时取消订阅。</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 关于我们 -->
+        <section id="about" class="py-16 relative">
+            <div class="container mx-auto px-4 md:px-6">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 class="font-orbitron text-3xl font-bold mb-6 neon-text-purple">关于<span class="neon-text">NeonVerse</span></h2>
+                        <p class="font-rajdhani text-lg mb-6">
+                            NeonVerse 成立于2088年，是赛博朋克风格产品的先驱者。我们的使命是将未来科技与现代生活完美融合，创造独一无二的产品体验。
+                        </p>
+                        <p class="font-rajdhani text-lg mb-6">
+                            我们的设计团队由来自全球的顶尖设计师组成，他们不断探索科技与艺术的边界，为你带来最前沿的赛博朋克产品。
+                        </p>
+                        <div class="flex space-x-4">
+                            <a href="#" class="social-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.77 7 2.476v6.759z"/>
+                                </svg>
+                            </a>
+                            <a href="#" class="social-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="relative">
+                        <div class="absolute -top-5 -left-5 w-20 h-20 bg-neon-purple rounded-full blur-xl opacity-40"></div>
+                        <div class="absolute -bottom-5 -right-5 w-20 h-20 bg-neon-blue rounded-full blur-xl opacity-40"></div>
+                        <img src="https://images.unsplash.com/photo-1563656291-070cf6221fdd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600" alt="工作室" class="rounded-xl shadow-2xl relative z-10" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- 页脚 -->
+    <footer class="py-12 bg-cyber-darker relative">
+        <div class="container mx-auto px-4 md:px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="font-orbitron font-bold text-xl mb-4 neon-text-blue">NeonVerse</h3>
+                    <p class="font-rajdhani text-cyber-gray mb-4">
+                        探索赛博朋克世界的前沿，体验未来科技与时尚的完美融合。
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-cyber-gray hover:text-neon-pink transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="text-cyber-gray hover:text-neon-blue transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                        </a>
+                        <a href="#" class="text-cyber-gray hover:text-neon-green transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.77 7 2.476v6.759z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="font-orbitron font-bold mb-4">购物</h3>
+                    <ul class="space-y-2 font-rajdhani">
+                        <li><a href="#" class="hover:text-neon-blue transition-colors">最新产品</a></li>
+                        <li><a href="#" class="hover:text-neon-blue transition-colors">热门商品</a></li>
+                        <li><a href="#" class="hover:text-neon-blue transition-colors">限量版系列</a></li>
+                        <li><a href="#" class="hover:text-neon-blue transition-colors">礼品卡</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-orbitron font-bold mb-4">帮助</h3>
+                    <ul class="space-y-2 font-rajdhani">
+                        <li><a href="#" class="hover:text-neon-pink transition-colors">常见问题</a></li>
+                        <li><a href="#" class="hover:text-neon-pink transition-colors">退货政策</a></li>
+                        <li><a href="#" class="hover:text-neon-pink transition-colors">配送信息</a></li>
+                        <li><a href="#" class="hover:text-neon-pink transition-colors">联系我们</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-orbitron font-bold mb-4">公司</h3>
+                    <ul class="space-y-2 font-rajdhani">
+                        <li><a href="#" class="hover:text-neon-green transition-colors">关于我们</a></li>
+                        <li><a href="#" class="hover:text-neon-green transition-colors">招贤纳士</a></li>
+                        <li><a href="#" class="hover:text-neon-green transition-colors">隐私政策</a></li>
+                        <li><a href="#" class="hover:text-neon-green transition-colors">服务条款</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-cyber-gray border-opacity-20 text-center">
+                <p class="font-rajdhani text-cyber-gray text-sm">
+                    &copy; 2088 NeonVerse. 保留所有权利。 
+                    <span class="inline-block animate-text-flicker">赛博朋克生活方式的先驱者</span>
+                </p>
+            </div>
+        </div>
+        
+        <!-- 装饰线条 -->
+        <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-neon-pink via-neon-blue to-neon-green"></div>
+    </footer>
+
+    <script>
+        // WebGL 背景动画
+        function initWebGLBackground() {
+            const canvas = document.getElementById('bg-canvas');
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                alpha: true
+            });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 3;
+            
+            // 创建后期处理效果
+            const composer = new THREE.EffectComposer(renderer);
+            const renderPass = new THREE.RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            const bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.5,   // 强度
+                0.4,   // 半径
+                0.85   // 阈值
+            );
+            composer.addPass(bloomPass);
+            
+            // 粒子系统
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 3000;
+            
+            const posArray = new Float32Array(particlesCount * 3);
+            const colorsArray = new Float32Array(particlesCount * 3);
+            
+            for(let i = 0; i < particlesCount * 3; i += 3) {
+                // 位置
+                posArray[i] = (Math.random() - 0.5) * 10;
+                posArray[i+1] = (Math.random() - 0.5) * 10;
+                posArray[i+2] = (Math.random() - 0.5) * 10;
+                
+                // 颜色
+                const colorChoice = Math.random();
+                if (colorChoice < 0.25) {
+                    // 粉色
+                    colorsArray[i] = 1.0;
+                    colorsArray[i+1] = 0.16;
+                    colorsArray[i+2] = 0.43;
+                } else if (colorChoice < 0.5) {
+                    // 蓝色
+                    colorsArray[i] = 0.02;
+                    colorsArray[i+1] = 0.85;
+                    colorsArray[i+2] = 0.91;
+                } else if (colorChoice < 0.75) {
+                    // 绿色
+                    colorsArray[i] = 0.22;
+                    colorsArray[i+1] = 1.0;
+                    colorsArray[i+2] = 0.08;
+                } else {
+                    // 紫色
+                    colorsArray[i] = 0.62;
+                    colorsArray[i+1] = 0.31;
+                    colorsArray[i+2] = 0.87;
+                }
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+            
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.01,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+            
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            // 响应窗口调整大小
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                composer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // 动画函数
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // 旋转粒子系统
+                particlesMesh.rotation.x += 0.0003;
+                particlesMesh.rotation.y += 0.0005;
+                
+                // 使用后期处理渲染
+                composer.render();
+            }
+            
+            animate();
+        }
+        
+        // 初始化购物车功能
+        function initCart() {
+            const cartBtn = document.getElementById('cart-btn');
+            const closeBtnCart = document.getElementById('close-cart');
+            const cartSidebar = document.getElementById('cart-sidebar');
+            const cartItems = document.getElementById('cart-items');
+            const emptyCart = document.getElementById('empty-cart');
+            const cartSummary = document.getElementById('cart-summary');
+            const cartSubtotal = document.getElementById('cart-subtotal');
+            const cartTotal = document.getElementById('cart-total');
+            const cartCount = document.getElementById('cart-count');
+            
+            let cart = [];
+            
+            // 打开购物车
+            cartBtn.addEventListener('click', () => {
+                cartSidebar.classList.remove('translate-x-full');
+                updateCartDisplay();
+            });
+            
+            // 关闭购物车
+            closeBtnCart.addEventListener('click', () => {
+                cartSidebar.classList.add('translate-x-full');
+            });
+            
+            // 添加到购物车按钮
+            const addToCartButtons = document.querySelectorAll('.add-to-cart');
+            addToCartButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const productCard = e.target.closest('.product-card');
+                    const productId = productCard.dataset.id;
+                    const productName = productCard.dataset.name;
+                    const productPrice = parseFloat(productCard.dataset.price);
+                    const originalPrice = productCard.dataset.originalPrice ? parseFloat(productCard.dataset.originalPrice) : null;
+                    
+                    // 检查商品是否已在购物车中
+                    const existingItem = cart.find(item => item.id === productId);
+                    
+                    if (existingItem) {
+                        existingItem.quantity += 1;
+                    } else {
+                        cart.push({
+                            id: productId,
+                            name: productName,
+                            price: productPrice,
+                            originalPrice: originalPrice,
+                            quantity: 1
+                        });
+                    }
+                    
+                    // 更新购物车显示
+                    updateCartDisplay();
+                    
+                    // 显示购物车
+                    cartSidebar.classList.remove('translate-x-full');
+                    
+                    // 显示添加动画
+                    const productImg = productCard.querySelector('img');
+                    const imgClone = productImg.cloneNode(true);
+                    const rect = productImg.getBoundingClientRect();
+                    const cartRect = cartBtn.getBoundingClientRect();
+                    
+                    imgClone.style.position = 'fixed';
+                    imgClone.style.top = `${rect.top}px`;
+                    imgClone.style.left = `${rect.left}px`;
+                    imgClone.style.width = `${rect.width}px`;
+                    imgClone.style.height = `${rect.height}px`;
+                    imgClone.style.opacity = '0.8';
+                    imgClone.style.zIndex = '1000';
+                    imgClone.style.transition = 'all 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3)';
+                    imgClone.style.pointerEvents = 'none';
+                    
+                    document.body.appendChild(imgClone);
+                    
+                    setTimeout(() => {
+                        imgClone.style.top = `${cartRect.top}px`;
+                        imgClone.style.left = `${cartRect.left}px`;
+                        imgClone.style.width = '20px';
+                        imgClone.style.height = '20px';
+                        imgClone.style.opacity = '0';
+                        imgClone.style.borderRadius = '50%';
+                    }, 50);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(imgClone);
+                    }, 650);
+                });
+            });
+            
+            // 更新购物车显示
+            function updateCartDisplay() {
+                // 更新购物车计数
+                const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+                cartCount.textContent = totalItems;
+                
+                // 更新购物车项目
+                cartItems.innerHTML = '';
+                
+                if (cart.length === 0) {
+                    emptyCart.style.display = 'block';
+                    cartSummary.style.display = 'none';
+                    return;
+                }
+                
+                emptyCart.style.display = 'none';
+                cartSummary.style.display = 'block';
+                
+                let subtotal = 0;
+                
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    subtotal += itemTotal;
+                    
+                    const cartItemEl = document.createElement('div');
+                    cartItemEl.className = 'flex justify-between items-center p-3 bg-cyber-dark bg-opacity-50 rounded-lg';
+                    cartItemEl.dataset.id = item.id;
+                    
+                    cartItemEl.innerHTML = `
+                        <div class="flex-grow">
+                            <h4 class="font-orbitron text-sm font-medium">${item.name}</h4>
+                            <div class="flex items-center mt-1">
+                                <span class="text-sm neon-text-blue">¥${item.price.toFixed(2)}</span>
+                                ${item.originalPrice ? `<span class="text-xs line-through ml-2 text-cyber-gray">¥${item.originalPrice.toFixed(2)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <button class="decrease-quantity p-1 text-cyber-gray hover:text-neon-pink">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                                </svg>
+                            </button>
+                            <span class="mx-2 text-sm">${item.quantity}</span>
+                            <button class="increase-quantity p-1 text-cyber-gray hover:text-neon-green">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                            </button>
+                            <button class="remove-item ml-2 p-1 text-cyber-gray hover:text-neon-pink">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    
+                    cartItems.appendChild(cartItemEl);
+                    
+                    // 增加数量
+                    cartItemEl.querySelector('.increase-quantity').addEventListener('click', () => {
+                        const cartItem = cart.find(cartItem => cartItem.id === item.id);
+                        cartItem.quantity += 1;
+                        updateCartDisplay();
+                    });
+                    
+                    // 减少数量
+                    cartItemEl.querySelector('.decrease-quantity').addEventListener('click', () => {
+                        const cartItem = cart.find(cartItem => cartItem.id === item.id);
+                        cartItem.quantity -= 1;
+                        
+                        if (cartItem.quantity <= 0) {
+                            cart = cart.filter(cartItem => cartItem.id !== item.id);
+                        }
+                        
+                        updateCartDisplay();
+                    });
+                    
+                    // 删除商品
+                    cartItemEl.querySelector('.remove-item').addEventListener('click', () => {
+                        cart = cart.filter(cartItem => cartItem.id !== item.id);
+                        updateCartDisplay();
+                    });
+                });
+                
+                // 更新小计和总计
+                cartSubtotal.textContent = `¥${subtotal.toFixed(2)}`;
+                cartTotal.textContent = `¥${subtotal.toFixed(2)}`;
+            }
+        }
+        
+        // 初始化移动端菜单
+        function initMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            // 点击菜单项后关闭菜单
+            const mobileMenuLinks = mobileMenu.querySelectorAll('a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+        }
+        
+        // 初始化倒计时
+        function initCountdown() {
+            // 设置倒计时结束时间 (未来5天)
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 5);
+            
+            const countdownDays = document.getElementById('countdown-days');
+            const countdownHours = document.getElementById('countdown-hours');
+            const countdownMinutes = document.getElementById('countdown-minutes');
+            const countdownSeconds = document.getElementById('countdown-seconds');
+            
+            function updateCountdown() {
+                const now = new Date();
+                const diff = endDate - now;
+                
+                if (diff <= 0) {
+                    // 倒计时结束
+                    countdownDays.textContent = '00';
+                    countdownHours.textContent = '00';
+                    countdownMinutes.textContent = '00';
+                    countdownSeconds.textContent = '00';
+                    return;
+                }
+                
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                countdownDays.textContent = days < 10 ? `0${days}` : days;
+                countdownHours.textContent = hours < 10 ? `0${hours}` : hours;
+                countdownMinutes.textContent = minutes < 10 ? `0${minutes}` : minutes;
+                countdownSeconds.textContent = seconds < 10 ? `0${seconds}` : seconds;
+            }
+            
+            // 初始化更新，然后每秒更新一次
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+        
+        // 减少动画选项
+        function initReduceMotion() {
+            const reduceMotionBtn = document.getElementById('reduce-motion-btn');
+            const body = document.body;
+            
+            reduceMotionBtn.addEventListener('click', () => {
+                body.classList.toggle('reduced-motion');
+                
+                // 保存用户偏好
+                if (body.classList.contains('reduced-motion')) {
+                    localStorage.setItem('reduceMotion', 'true');
+                    reduceMotionBtn.title = '启用动画效果';
+                } else {
+                    localStorage.setItem('reduceMotion', 'false');
+                    reduceMotionBtn.title = '减少动画效果';
+                }
+            });
+            
+            // 检查用户偏好
+            if (localStorage.getItem('reduceMotion') === 'true') {
+                body.classList.add('reduced-motion');
+                reduceMotionBtn.title = '启用动画效果';
+            }
+            
+            // 检查用户系统偏好
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            if (prefersReducedMotion.matches && localStorage.getItem('reduceMotion') !== 'false') {
+                body.classList.add('reduced-motion');
+                reduceMotionBtn.title = '启用动画效果';
+            }
+        }
+        
+        // 页面加载时初始化所有功能
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化 WebGL 背景
+            initWebGLBackground();
+            
+            // 初始化购物车功能
+            initCart();
+            
+            // 初始化移动端菜单
+            initMobileMenu();
+            
+            // 初始化倒计时
+            initCountdown();
+            
+            // 初始化减少动画选项
+            initReduceMotion();
+            
+            // 添加平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80, // 考虑导航栏高度
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // 初始化 GSAP 动画
+            if (typeof gsap !== 'undefined') {
+                // 滚动触发动画
+                gsap.registerPlugin(ScrollTrigger);
+                
+                // 标题文本动画
+                gsap.utils.toArray('.neon-text, .neon-text-blue, .neon-text-green, .neon-text-purple').forEach(text => {
+                    gsap.from(text, {
+                        opacity: 0,
+                        y: 20,
+                        duration: 1,
+                        scrollTrigger: {
+                            trigger: text,
+                            start: "top 80%",
+                            toggleActions: "play none none none"
+                        }
+                    });
+                });
+                
+                // 产品卡片动画
+                gsap.utils.toArray('.product-card').forEach(card => {
+                    gsap.from(card, {
+                        opacity: 0,
+                        y: 50,
+                        duration: 0.8,
+                        scrollTrigger: {
+                            trigger: card,
+                            start: "top 85%",
+                            toggleActions: "play none none none"
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
