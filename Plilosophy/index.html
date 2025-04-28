@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>哲学思想库</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#5D5CDE',
+                            dark: '#7A79E0'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .mindmap-node circle {
+            stroke: #5D5CDE;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .mindmap-node text {
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .mindmap-link {
+            stroke: #5D5CDE;
+            stroke-width: 1.5px;
+            fill: none;
+            transition: all 0.3s ease;
+        }
+
+        .dark .mindmap-node circle {
+            stroke: #7A79E0;
+        }
+
+        .dark .mindmap-link {
+            stroke: #7A79E0;
+        }
+
+        .dark .mindmap-node text {
+            fill: #E5E7EB;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background-color: #4B5563;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div class="min-h-screen flex flex-col">
+        <header class="bg-primary dark:bg-primary-dark text-white p-4 shadow-md">
+            <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+                <h1 class="text-2xl font-bold mb-4 md:mb-0">哲学思想库</h1>
+                <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                    <div class="relative w-full md:w-64">
+                        <input type="text" id="search-input" placeholder="搜索哲学家或概念..." 
+                            class="pl-3 pr-10 py-2 w-full rounded-md text-gray-900 dark:text-white text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-primary-dark">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute right-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <div class="flex space-x-2">
+                        <select id="filter-region" class="px-3 py-2 rounded-md text-gray-900 dark:text-white text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-primary-dark">
+                            <option value="all">所有地区</option>
+                            <option value="中国">中国</option>
+                            <option value="希腊">希腊</option>
+                            <option value="罗马">罗马</option>
+                            <option value="德国">德国</option>
+                            <option value="法国">法国</option>
+                            <option value="英国">英国</option>
+                            <option value="印度">印度</option>
+                        </select>
+                        <select id="filter-period" class="px-3 py-2 rounded-md text-gray-900 dark:text-white text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-primary-dark">
+                            <option value="all">所有时期</option>
+                            <option value="古代">古代</option>
+                            <option value="中世纪">中世纪</option>
+                            <option value="近代">近代</option>
+                            <option value="现代">现代</option>
+                            <option value="当代">当代</option>
+                        </select>
+                        <button id="toggle-theme" class="p-2 rounded-md bg-white/20 hover:bg-white/30 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow container mx-auto p-4">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <div class="w-full lg:w-1/3 overflow-y-auto">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary dark:text-primary-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                            哲学家列表
+                        </h2>
+                        <div id="philosopher-list" class="grid gap-2 max-h-[70vh] overflow-y-auto"></div>
+                    </div>
+                </div>
+                
+                <div class="w-full lg:w-2/3">
+                    <div id="philosopher-detail" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6 min-h-[20vh]">
+                        <div id="placeholder" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p>从左侧列表选择一位哲学家查看详情</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                        <h2 class="text-xl font-semibold mb-4 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary dark:text-primary-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                            </svg>
+                            思维导图
+                        </h2>
+                        <div id="mindmap-container" class="w-full bg-gray-50 dark:bg-gray-900 rounded-lg p-2 h-[50vh] overflow-auto">
+                            <div id="mindmap" class="w-full h-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-gray-100 dark:bg-gray-800 py-4 text-center text-gray-600 dark:text-gray-400 mt-8">
+            <div class="container mx-auto">
+                <p>哲学思想库 - 可在本地无网络环境部署和运行</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // 检测并设置深色/浅色模式
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // 哲学家数据库
+        const philosophers = [
+            {
+                id: 1,
+                name: "孔子",
+                region: "中国",
+                period: "古代",
+                years: "前551-前479",
+                description: "中国古代思想家、教育家，儒家学派创始人。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>孔子</text></svg>",
+                works: [
+                    { title: "论语", description: "记录孔子及其弟子言行的语录集，由孔子弟子及再传弟子编撰" },
+                    { title: "五经", description: "《诗》《书》《礼》《易》《春秋》，相传为孔子所编订" }
+                ],
+                concepts: [
+                    { name: "仁", description: "儒家核心思想，指人与人之间的相互关爱与尊重" },
+                    { name: "礼", description: "社会规范和秩序，维护社会和谐的行为准则" },
+                    { name: "中庸", description: "表示事物适度，不偏不倚的处事态度" },
+                    { name: "君子", description: "有德行、修养的理想人格" }
+                ]
+            },
+            {
+                id: 2,
+                name: "老子",
+                region: "中国",
+                period: "古代",
+                years: "约前571-前471",
+                description: "中国古代哲学家、思想家，道家学派创始人。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>老子</text></svg>",
+                works: [
+                    { title: "道德经", description: "又称《老子》，阐述道家哲学思想的著作" }
+                ],
+                concepts: [
+                    { name: "道", description: "宇宙万物运行的规律和本原" },
+                    { name: "无为", description: "顺应自然，不妄为，不强求" },
+                    { name: "柔弱胜刚强", description: "柔弱的事物往往能够战胜刚强的事物" },
+                    { name: "返璞归真", description: "回归自然本真状态" }
+                ]
+            },
+            {
+                id: 3,
+                name: "庄子",
+                region: "中国",
+                period: "古代",
+                years: "约前369-前286",
+                description: "战国时期思想家，道家学派代表人物之一。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>庄子</text></svg>",
+                works: [
+                    { title: "庄子", description: "道家重要著作，分为内篇、外篇、杂篇" }
+                ],
+                concepts: [
+                    { name: "逍遥游", description: "精神自由，超脱世俗约束" },
+                    { name: "齐物论", description: "万物平等，是非相对" },
+                    { name: "无用之用", description: "看似无用之物往往有其大用" },
+                    { name: "庖丁解牛", description: "形容技艺精湛，达到忘我境界" }
+                ]
+            },
+            {
+                id: 4,
+                name: "亚里士多德",
+                region: "希腊",
+                period: "古代",
+                years: "前384-前322",
+                description: "古希腊哲学家，柏拉图的学生，亚历山大大帝的老师。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='15' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>亚里士多德</text></svg>",
+                works: [
+                    { title: "形而上学", description: "探讨存在、实体、因果等哲学问题" },
+                    { title: "尼各马可伦理学", description: "阐述德性伦理学的重要著作" },
+                    { title: "政治学", description: "研究城邦政治制度的著作" }
+                ],
+                concepts: [
+                    { name: "四因说", description: "解释事物存在和变化的四种原因：质料因、形式因、动力因、目的因" },
+                    { name: "中庸之道", description: "德性是两种极端之间的中间状态" },
+                    { name: "逻辑学", description: "系统研究推理形式和思维规律" },
+                    { name: "实体", description: "独立存在的事物，是属性的承载者" }
+                ]
+            },
+            {
+                id: 5,
+                name: "苏格拉底",
+                region: "希腊",
+                period: "古代",
+                years: "前470-前399",
+                description: "古希腊哲学家，西方哲学的奠基人之一。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>苏格拉底</text></svg>",
+                works: [
+                    { title: "通过柏拉图对话录", description: "苏格拉底本人没有著作，其思想主要通过柏拉图的对话录传承" }
+                ],
+                concepts: [
+                    { name: "产婆术", description: "通过提问引导对方自己发现真理的方法" },
+                    { name: "认识你自己", description: "德尔斐神庙箴言，苏格拉底哲学的核心" },
+                    { name: "无知之知", description: "承认自己的无知是获得真知的开始" },
+                    { name: "德性即知识", description: "认为知道什么是善，就会行善" }
+                ]
+            },
+            {
+                id: 6,
+                name: "柏拉图",
+                region: "希腊",
+                period: "古代",
+                years: "前427-前347",
+                description: "古希腊哲学家，苏格拉底的学生，亚里士多德的老师。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>柏拉图</text></svg>",
+                works: [
+                    { title: "理想国", description: "讨论正义和理想社会的对话录" },
+                    { title: "会饮篇", description: "探讨爱与美的本质" },
+                    { title: "斐多篇", description: "讨论灵魂不朽的对话" }
+                ],
+                concepts: [
+                    { name: "理念论", description: "认为现实世界只是理念世界的影子" },
+                    { name: "洞穴寓言", description: "描述人类对真实世界认识的局限性" },
+                    { name: "哲学王", description: "理想国中由哲学家统治的政治理念" },
+                    { name: "灵魂三分说", description: "灵魂由理性、激情和欲望三部分组成" }
+                ]
+            },
+            {
+                id: 7,
+                name: "康德",
+                region: "德国",
+                period: "近代",
+                years: "1724-1804",
+                description: "德国哲学家，德国古典哲学创始人，批判哲学的奠基人。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>康德</text></svg>",
+                works: [
+                    { title: "纯粹理性批判", description: "探讨人类认识能力的局限" },
+                    { title: "实践理性批判", description: "探讨道德哲学" },
+                    { title: "判断力批判", description: "探讨审美判断和目的论判断" }
+                ],
+                concepts: [
+                    { name: "先验", description: "独立于经验之前的认识" },
+                    { name: "物自体", description: "事物本身，与现象界相对" },
+                    { name: "定言令式", description: "无条件的道德命令" },
+                    { name: "哥白尼式革命", description: "认识不是主体适应客体，而是客体适应主体" }
+                ]
+            },
+            {
+                id: 8,
+                name: "黑格尔",
+                region: "德国",
+                period: "近代",
+                years: "1770-1831",
+                description: "德国古典哲学的代表人物，辩证法的集大成者。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>黑格尔</text></svg>",
+                works: [
+                    { title: "精神现象学", description: "描述意识发展的历程" },
+                    { title: "逻辑学", description: "阐述辩证法的理论体系" },
+                    { title: "哲学百科全书", description: "系统阐释黑格尔哲学体系" }
+                ],
+                concepts: [
+                    { name: "辩证法", description: "正题、反题、合题的发展过程" },
+                    { name: "绝对精神", description: "世界发展的最终目的和本质" },
+                    { name: "扬弃", description: "既否定又保留，提升到更高层次" },
+                    { name: "理性的现实性", description: "凡是现实的都是理性的，凡是理性的都是现实的" }
+                ]
+            },
+            {
+                id: 9,
+                name: "荀子",
+                region: "中国",
+                period: "古代",
+                years: "约前313-前238",
+                description: "战国末期儒家代表人物，性恶论的提出者。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>荀子</text></svg>",
+                works: [
+                    { title: "荀子", description: "记录荀子思想的著作集" }
+                ],
+                concepts: [
+                    { name: "性恶论", description: "人的本性是恶的，向善需要后天教化" },
+                    { name: "礼义", description: "通过礼义教化人性，使人向善" },
+                    { name: "天人之分", description: "强调自然规律与人事的区别" },
+                    { name: "正名", description: "名实相符，是社会秩序的基础" }
+                ]
+            },
+            {
+                id: 10,
+                name: "孟子",
+                region: "中国",
+                period: "古代",
+                years: "约前372-前289",
+                description: "战国时期思想家，儒家代表人物，性善论的提出者。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>孟子</text></svg>",
+                works: [
+                    { title: "孟子", description: "记录孟子言行的儒家经典" }
+                ],
+                concepts: [
+                    { name: "性善论", description: "人性本善，恶是后天环境造成的" },
+                    { name: "仁政", description: "以仁爱治国，关心百姓福祉" },
+                    { name: "四端", description: "人的四种善端：恻隐之心、羞恶之心、辞让之心、是非之心" },
+                    { name: "民本思想", description: "民为贵，社稷次之，君为轻" }
+                ]
+            },
+            {
+                id: 11,
+                name: "尼采",
+                region: "德国",
+                period: "近代",
+                years: "1844-1900",
+                description: "德国哲学家，存在主义先驱，生命哲学的代表人物。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>尼采</text></svg>",
+                works: [
+                    { title: "查拉图斯特拉如是说", description: "尼采哲学思想的代表作" },
+                    { title: "偶像的黄昏", description: "批判传统形而上学和道德观念" },
+                    { title: "悲剧的诞生", description: "探讨古希腊悲剧精神" }
+                ],
+                concepts: [
+                    { name: "权力意志", description: "人类行为的根本动力" },
+                    { name: "超人", description: "超越普通人的理想人格形象" },
+                    { name: "永恒轮回", description: "宇宙周期性循环的思想" },
+                    { name: "上帝已死", description: "传统宗教价值观的崩溃" }
+                ]
+            },
+            {
+                id: 12,
+                name: "萨特",
+                region: "法国",
+                period: "现代",
+                years: "1905-1980",
+                description: "法国哲学家、文学家，存在主义代表人物。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>萨特</text></svg>",
+                works: [
+                    { title: "存在与虚无", description: "存在主义哲学的代表作" },
+                    { title: "恶心", description: "探讨存在的荒谬性的小说" },
+                    { title: "存在主义是一种人道主义", description: "阐述萨特存在主义思想" }
+                ],
+                concepts: [
+                    { name: "存在先于本质", description: "人没有预设的本质，通过选择和行动创造自己" },
+                    { name: "自由的责任", description: "绝对自由带来绝对责任" },
+                    { name: "他人即地狱", description: "他人的注视使我们沦为客体" },
+                    { name: "恶心", description: "面对世界荒谬性和偶然性的体验" }
+                ]
+            },
+            {
+                id: 13,
+                name: "笛卡尔",
+                region: "法国",
+                period: "近代",
+                years: "1596-1650",
+                description: "法国哲学家、数学家，现代哲学之父。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>笛卡尔</text></svg>",
+                works: [
+                    { title: "方法论", description: "阐述笛卡尔的方法论思想" },
+                    { title: "第一哲学沉思录", description: "探讨怀疑、确定性和上帝存在的证明" },
+                    { title: "哲学原理", description: "系统阐述笛卡尔哲学体系" }
+                ],
+                concepts: [
+                    { name: "我思故我在", description: "通过思维证明自身存在的确定性" },
+                    { name: "二元论", description: "心灵和物质是两种完全不同的实体" },
+                    { name: "方法怀疑", description: "通过彻底怀疑寻求确定性知识" },
+                    { name: "天赋观念", description: "人生而具有的先天观念" }
+                ]
+            },
+            {
+                id: 14,
+                name: "王阳明",
+                region: "中国",
+                period: "近代",
+                years: "1472-1529",
+                description: "明代思想家、哲学家、军事家，心学的集大成者。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>王阳明</text></svg>",
+                works: [
+                    { title: "传习录", description: "记录王阳明与弟子对话的著作" },
+                    { title: "王文成公全书", description: "王阳明著作的汇编" }
+                ],
+                concepts: [
+                    { name: "心即理", description: "心中固有的道德准则就是天理" },
+                    { name: "知行合一", description: "真知必须体现在行动中" },
+                    { name: "致良知", description: "发挥人内心本有的良知" },
+                    { name: "四句教", description: "无善无恶心之体，有善有恶意之动，知善知恶是良知，为善去恶是格物" }
+                ]
+            },
+            {
+                id: 15,
+                name: "朱熹",
+                region: "中国",
+                period: "中世纪",
+                years: "1130-1200",
+                description: "南宋哲学家、思想家，理学的代表人物。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>朱熹</text></svg>",
+                works: [
+                    { title: "四书章句集注", description: "对四书的注解" },
+                    { title: "朱子语类", description: "记录朱熹言论的汇编" }
+                ],
+                concepts: [
+                    { name: "理气论", description: "理是事物的规律和法则，气是构成事物的质料" },
+                    { name: "格物致知", description: "通过研究事物获得知识" },
+                    { name: "存天理，灭人欲", description: "保存天理，消除私欲" },
+                    { name: "理一分殊", description: "理的本体是一，但分布在万事万物中" }
+                ]
+            },
+            {
+                id: 16,
+                name: "韩非子",
+                region: "中国",
+                period: "古代",
+                years: "约前280-前233",
+                description: "战国末期思想家，法家代表人物。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='20' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>韩非子</text></svg>",
+                works: [
+                    { title: "韩非子", description: "记录韩非子思想的著作" }
+                ],
+                concepts: [
+                    { name: "法治", description: "以法为治国之本" },
+                    { name: "势", description: "统治者的权威和地位" },
+                    { name: "术", description: "君主控制臣下的方法" },
+                    { name: "二柄", description: "刑罚和赏赐，君主控制臣下的两个工具" }
+                ]
+            },
+            {
+                id: 17,
+                name: "维特根斯坦",
+                region: "英国",
+                period: "现代",
+                years: "1889-1951",
+                description: "奥地利裔英国哲学家，分析哲学和语言哲学的重要代表。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='13' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>维特根斯坦</text></svg>",
+                works: [
+                    { title: "逻辑哲学论", description: "早期思想的代表作" },
+                    { title: "哲学研究", description: "后期思想的代表作" }
+                ],
+                concepts: [
+                    { name: "语言游戏", description: "语言在不同语境中有不同的使用规则" },
+                    { name: "图像论", description: "语言是世界的图像，语言与事实具有相同的逻辑结构" },
+                    { name: "家族相似性", description: "概念之间不必有共同本质，而是相互之间有错综复杂的相似性" },
+                    { name: "说不出的东西", description: "某些东西无法通过语言表达，只能显示出来" }
+                ]
+            },
+            {
+                id: 18,
+                name: "佛陀",
+                region: "印度",
+                period: "古代",
+                years: "约前563-前483",
+                description: "佛教创始人，本名悉达多·乔达摩，又称释迦牟尼。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>佛陀</text></svg>",
+                works: [
+                    { title: "经藏", description: "记录佛陀言教的经文集" },
+                    { title: "律藏", description: "记录僧团戒律的经文集" },
+                    { title: "论藏", description: "对佛法的理论阐述" }
+                ],
+                concepts: [
+                    { name: "四圣谛", description: "苦、集、灭、道四个基本真理" },
+                    { name: "八正道", description: "正见、正思维、正语、正业、正命、正精进、正念、正定" },
+                    { name: "缘起性空", description: "一切事物因缘而起，无有实体" },
+                    { name: "无我", description: "否定永恒不变的自我存在" }
+                ]
+            },
+            {
+                id: 19,
+                name: "休谟",
+                region: "英国",
+                period: "近代",
+                years: "1711-1776",
+                description: "苏格兰哲学家，经验主义的代表人物。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='24' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>休谟</text></svg>",
+                works: [
+                    { title: "人性论", description: "探讨人类认识和行为的本质" },
+                    { title: "人类理解研究", description: "对人类认识能力的研究" },
+                    { title: "自然宗教对话录", description: "探讨宗教问题的著作" }
+                ],
+                concepts: [
+                    { name: "因果怀疑论", description: "质疑必然的因果关系，认为只是习惯联想" },
+                    { name: "印象与观念", description: "印象是直接感受，观念是印象的复制" },
+                    { name: "实体怀疑论", description: "质疑持久存在的实体概念" },
+                    { name: "自我怀疑论", description: "质疑持久统一的自我" }
+                ]
+            },
+            {
+                id: 20,
+                name: "亚当·斯密",
+                region: "英国",
+                period: "近代",
+                years: "1723-1790",
+                description: "苏格兰哲学家、经济学家，古典经济学的创始人。",
+                image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%235D5CDE' opacity='0.2' /><text x='50' y='50' font-family='Arial' font-size='18' fill='%235D5CDE' text-anchor='middle' dominant-baseline='middle'>亚当·斯密</text></svg>",
+                works: [
+                    { title: "国富论", description: "探讨国家财富的本质和原因" },
+                    { title: "道德情操论", description: "探讨道德哲学和伦理学的著作" }
+                ],
+                concepts: [
+                    { name: "看不见的手", description: "市场的自发调节作用" },
+                    { name: "分工理论", description: "劳动分工提高生产效率" },
+                    { name: "同情心", description: "人类道德情感的基础" },
+                    { name: "自由贸易", description: "反对贸易保护主义，支持自由市场" }
+                ]
+            }
+        ];
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 夜间模式切换
+            const toggleThemeButton = document.getElementById('toggle-theme');
+            toggleThemeButton.addEventListener('click', function() {
+                document.documentElement.classList.toggle('dark');
+            });
+
+            // 渲染哲学家列表
+            renderPhilosopherList(philosophers);
+
+            // 搜索和筛选事件监听
+            document.getElementById('search-input').addEventListener('input', filterPhilosophers);
+            document.getElementById('filter-region').addEventListener('change', filterPhilosophers);
+            document.getElementById('filter-period').addEventListener('change', filterPhilosophers);
+            
+            // 初始化思维导图（默认显示所有哲学家的概念）
+            generateMindMap(null);
+        });
+
+        // 渲染哲学家列表
+        function renderPhilosopherList(philosophers) {
+            const listContainer = document.getElementById('philosopher-list');
+            listContainer.innerHTML = '';
+            
+            if(philosophers.length === 0) {
+                listContainer.innerHTML = '<div class="text-center py-6 text-gray-500 dark:text-gray-400">没有找到匹配的哲学家</div>';
+                return;
+            }
+
+            philosophers.forEach(philosopher => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition';
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-white dark:bg-gray-800">
+                            <img src="${philosopher.image}" alt="${philosopher.name}" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h3 class="font-semibold">${philosopher.name}</h3>
+                            <div class="text-sm text-gray-600 dark:text-gray-300">${philosopher.period} · ${philosopher.region}</div>
+                        </div>
+                    </div>
+                `;
+                item.addEventListener('click', () => showPhilosopherDetail(philosopher));
+                listContainer.appendChild(item);
+            });
+        }
+
+        // 显示哲学家详情
+        function showPhilosopherDetail(philosopher) {
+            const detailContainer = document.getElementById('philosopher-detail');
+            document.getElementById('placeholder').style.display = 'none';
+            
+            // 计算该哲学家的概念关联
+            const relatedPhilosophers = findRelatedPhilosophers(philosopher);
+            
+            detailContainer.innerHTML = `
+                <div class="flex flex-col md:flex-row">
+                    <div class="w-32 h-32 md:w-40 md:h-40 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex-shrink-0 mx-auto md:mx-0 mb-4 md:mb-0">
+                        <img src="${philosopher.image}" alt="${philosopher.name}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="md:ml-6 flex-grow">
+                        <h2 class="text-2xl font-bold">${philosopher.name}</h2>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <span class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 rounded-full">${philosopher.period}</span>
+                            <span class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-full">${philosopher.region}</span>
+                            <span class="px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100 rounded-full">${philosopher.years}</span>
+                        </div>
+                        <p class="mt-3 text-gray-700 dark:text-gray-300">${philosopher.description}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-xl font-semibold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">作品 / 著作</h3>
+                    <div class="grid gap-3">
+                        ${philosopher.works.map(work => `
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <h4 class="font-medium">${work.title}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${work.description}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-xl font-semibold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">核心概念</h3>
+                    <div class="grid gap-3 md:grid-cols-2">
+                        ${philosopher.concepts.map(concept => `
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <h4 class="font-medium">${concept.name}</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${concept.description}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                ${relatedPhilosophers.length > 0 ? `
+                <div class="mt-6">
+                    <h3 class="text-xl font-semibold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">思想关联</h3>
+                    <div class="flex flex-wrap gap-2">
+                        ${relatedPhilosophers.map(rel => `
+                            <div class="px-3 py-1 bg-primary/10 dark:bg-primary-dark/20 rounded-full text-primary dark:text-primary-dark cursor-pointer hover:bg-primary/20 dark:hover:bg-primary-dark/30 transition" 
+                                 onclick="showPhilosopherDetail(philosophers.find(p => p.id === ${rel.id}))">
+                                ${rel.name} (${rel.commonConcepts})
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            // 生成思维导图
+            generateMindMap(philosopher);
+        }
+
+        // 查找相关哲学家
+        function findRelatedPhilosophers(philosopher) {
+            const related = [];
+            
+            philosophers.forEach(otherPhil => {
+                if(otherPhil.id === philosopher.id) return;
+                
+                // 计算概念重叠
+                const thisPhilConcepts = philosopher.concepts.map(c => c.name.toLowerCase());
+                const otherPhilConcepts = otherPhil.concepts.map(c => c.name.toLowerCase());
+                
+                // 找到共同概念
+                const common = thisPhilConcepts.filter(concept => 
+                    otherPhilConcepts.some(otherConcept => 
+                        otherConcept.includes(concept) || concept.includes(otherConcept)
+                    )
+                );
+                
+                if(common.length > 0) {
+                    related.push({
+                        id: otherPhil.id,
+                        name: otherPhil.name,
+                        commonConcepts: common.length
+                    });
+                }
+            });
+            
+            // 按共同概念数量排序
+            return related.sort((a, b) => b.commonConcepts - a.commonConcepts).slice(0, 5);
+        }
+
+        // 筛选哲学家
+        function filterPhilosophers() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const regionFilter = document.getElementById('filter-region').value;
+            const periodFilter = document.getElementById('filter-period').value;
+            
+            const filtered = philosophers.filter(philosopher => {
+                // 搜索名称和概念
+                const nameMatch = philosopher.name.toLowerCase().includes(searchTerm);
+                const conceptMatch = philosopher.concepts.some(concept => 
+                    concept.name.toLowerCase().includes(searchTerm) ||
+                    concept.description.toLowerCase().includes(searchTerm)
+                );
+                const workMatch = philosopher.works.some(work => 
+                    work.title.toLowerCase().includes(searchTerm) ||
+                    work.description.toLowerCase().includes(searchTerm)
+                );
+                
+                // 地区和时期筛选
+                const regionMatch = regionFilter === 'all' || philosopher.region === regionFilter;
+                const periodMatch = periodFilter === 'all' || philosopher.period === periodFilter;
+                
+                return (nameMatch || conceptMatch || workMatch) && regionMatch && periodMatch;
+            });
+            
+            renderPhilosopherList(filtered);
+            
+            // 如果过滤后没有选中任何哲学家，但有搜索/筛选结果，取第一个结果
+            if (filtered.length > 0) {
+                generateMindMap(null, searchTerm);
+            }
+        }
+
+        // 生成思维导图
+        function generateMindMap(philosopher, searchTerm = '') {
+            const mindmapContainer = document.getElementById('mindmap');
+            const width = mindmapContainer.clientWidth;
+            const height = mindmapContainer.clientHeight;
+            
+            // 清除现有内容
+            mindmapContainer.innerHTML = '';
+            
+            // 准备数据
+            let mindmapData;
+            
+            if (philosopher) {
+                // 单个哲学家的思维导图
+                mindmapData = {
+                    name: philosopher.name,
+                    children: [
+                        {
+                            name: "作品",
+                            children: philosopher.works.map(work => ({ name: work.title, description: work.description }))
+                        },
+                        {
+                            name: "概念",
+                            children: philosopher.concepts.map(concept => ({ name: concept.name, description: concept.description }))
+                        }
+                    ]
+                };
+            } else if (searchTerm) {
+                // 搜索相关概念的思维导图
+                const allConcepts = [];
+                philosophers.forEach(philosopher => {
+                    philosopher.concepts.forEach(concept => {
+                        if (concept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            concept.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+                            allConcepts.push({
+                                name: concept.name,
+                                description: concept.description,
+                                philosopher: philosopher.name
+                            });
+                        }
+                    });
+                });
+                
+                mindmapData = {
+                    name: `搜索: "${searchTerm}"`,
+                    children: allConcepts.map(concept => ({
+                        name: concept.name,
+                        description: concept.description,
+                        info: concept.philosopher
+                    }))
+                };
+            } else {
+                // 所有哲学家按地区分组的思维导图
+                const regions = {};
+                philosophers.forEach(philosopher => {
+                    if (!regions[philosopher.region]) {
+                        regions[philosopher.region] = [];
+                    }
+                    regions[philosopher.region].push(philosopher);
+                });
+                
+                mindmapData = {
+                    name: "哲学思想库",
+                    children: Object.keys(regions).map(region => ({
+                        name: region,
+                        children: regions[region].map(philosopher => ({
+                            name: philosopher.name,
+                            period: philosopher.period
+                        }))
+                    }))
+                };
+            }
+            
+            // 创建SVG容器
+            const svg = d3.select("#mindmap")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 2},${height / 2})`);
+            
+            // 创建思维导图布局
+            const radius = Math.min(width, height) / 2 - 60;
+            
+            const tree = d3.tree()
+                .size([2 * Math.PI, radius])
+                .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth);
+            
+            // 根据数据生成树形结构
+            const root = d3.hierarchy(mindmapData);
+            tree(root);
+            
+            // 创建连接线
+            const link = svg.selectAll(".mindmap-link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "mindmap-link")
+                .attr("d", d3.linkRadial()
+                    .angle(d => d.x)
+                    .radius(d => d.y));
+            
+            // 创建节点
+            const node = svg.selectAll(".mindmap-node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "mindmap-node")
+                .attr("transform", d => `
+                    translate(${d.y * Math.sin(d.x)},${-d.y * Math.cos(d.x)})
+                `);
+            
+            // 添加节点圆圈
+            node.append("circle")
+                .attr("r", d => d.depth === 0 ? 25 : d.children ? 15 : 8)
+                .style("fill", d => {
+                    if (d.depth === 0) return "#5D5CDE";
+                    if (d.depth === 1) return "#7A79E0";
+                    return "#a3a2e8";
+                })
+                .style("cursor", "pointer")
+                .on("mouseover", function(event, d) {
+                    d3.select(this).transition().duration(300).attr("r", d.depth === 0 ? 28 : d.children ? 18 : 10);
+                    
+                    // 显示提示文本
+                    if (d.data.description) {
+                        tooltip.style("display", "block")
+                            .html(`
+                                <strong>${d.data.name}</strong>
+                                <p>${d.data.description}</p>
+                                ${d.data.info ? `<div class="text-xs text-gray-500">出自: ${d.data.info}</div>` : ''}
+                            `)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 20) + "px");
+                    }
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(this).transition().duration(300).attr("r", d.depth === 0 ? 25 : d.children ? 15 : 8);
+                    tooltip.style("display", "none");
+                })
+                .on("click", function(event, d) {
+                    // 如果点击哲学家名称，显示详情
+                    const philosopher = philosophers.find(p => p.name === d.data.name);
+                    if (philosopher) {
+                        showPhilosopherDetail(philosopher);
+                    }
+                });
+            
+            // 添加文本标签
+            node.append("text")
+                .attr("dy", d => d.depth === 0 ? "2em" : ".31em")
+                .attr("x", d => d.x < Math.PI ? 15 : -15)
+                .attr("text-anchor", d => d.x < Math.PI ? "start" : "end")
+                .attr("transform", d => d.x < Math.PI ? null : "rotate(180)")
+                .text(d => d.data.name)
+                .style("fill", "#333")
+                .style("font-size", d => d.depth === 0 ? "14px" : "12px")
+                .style("font-weight", d => d.depth < 2 ? "bold" : "normal")
+                .style("cursor", "pointer")
+                .on("mouseover", function(event, d) {
+                    if (d.data.description) {
+                        tooltip.style("display", "block")
+                            .html(`
+                                <strong>${d.data.name}</strong>
+                                <p>${d.data.description}</p>
+                                ${d.data.info ? `<div class="text-xs text-gray-500">出自: ${d.data.info}</div>` : ''}
+                            `)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 20) + "px");
+                    }
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
+            
+            // 创建提示框
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "mindmap-tooltip")
+                .style("position", "absolute")
+                .style("display", "none")
+                .style("background", "white")
+                .style("border", "1px solid #ddd")
+                .style("border-radius", "5px")
+                .style("padding", "10px")
+                .style("box-shadow", "0 4px 6px rgba(0,0,0,0.1)")
+                .style("max-width", "250px")
+                .style("font-size", "12px")
+                .style("z-index", "100");
+                
+            // 给思维导图添加缩放功能
+            const zoom = d3.zoom()
+                .scaleExtent([0.5, 3])
+                .on("zoom", (event) => {
+                    svg.attr("transform", event.transform);
+                });
+                
+            d3.select("#mindmap svg")
+                .call(zoom)
+                .on("dblclick.zoom", null); // 禁用双击缩放
+        }
+    </script>
+</body>
+</html>
