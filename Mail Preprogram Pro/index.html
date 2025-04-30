@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专业HTML邮件生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        'primary-dark': '#4A49B8',
+                        'primary-light': '#7E7DE6',
+                    },
+                    spacing: {
+                        '128': '32rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .theme-preview {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .theme-preview:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .selected-theme {
+            border: 2px solid #5D5CDE;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Dark mode styles */
+        .dark .selected-theme {
+            border-color: #7E7DE6;
+        }
+        .email-preview-container {
+            transition: all 0.3s ease;
+            transform-origin: top center;
+        }
+        .device-mobile {
+            max-width: 375px;
+            margin: 0 auto;
+        }
+        .device-tablet {
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        .device-desktop {
+            max-width: 100%;
+        }
+        .tab-active {
+            border-bottom: 2px solid #5D5CDE;
+            color: #5D5CDE;
+            font-weight: 500;
+        }
+        .dark .tab-active {
+            border-bottom: 2px solid #7E7DE6;
+            color: #7E7DE6;
+        }
+        /* Image uploader */
+        .image-uploader {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .image-uploader:hover {
+            border-color: #5D5CDE;
+        }
+        .dark .image-uploader:hover {
+            border-color: #7E7DE6;
+        }
+        .image-uploader img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .image-uploader input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+    <!-- Dark mode detection -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <main class="container mx-auto px-4 py-8 max-w-7xl">
+        <h1 class="text-3xl font-bold text-center mb-8">专业HTML邮件生成器</h1>
+        
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-8">
+            <!-- Step Indicator -->
+            <div class="flex justify-between mb-8 relative">
+                <div class="w-full absolute top-1/2 h-0.5 bg-gray-200 dark:bg-gray-700 -translate-y-1/2 z-0"></div>
+                <div class="step-indicator flex flex-col items-center relative z-10 bg-white dark:bg-gray-800 px-2">
+                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center">1</div>
+                    <span class="mt-2 text-sm">选择主题</span>
+                </div>
+                <div class="step-indicator flex flex-col items-center relative z-10 bg-white dark:bg-gray-800 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center">2</div>
+                    <span class="mt-2 text-sm">编辑内容</span>
+                </div>
+                <div class="step-indicator flex flex-col items-center relative z-10 bg-white dark:bg-gray-800 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center">3</div>
+                    <span class="mt-2 text-sm">预览</span>
+                </div>
+                <div class="step-indicator flex flex-col items-center relative z-10 bg-white dark:bg-gray-800 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center">4</div>
+                    <span class="mt-2 text-sm">导出代码</span>
+                </div>
+            </div>
+
+            <!-- Step 1: Theme Selection (initially visible) -->
+            <div id="step-1" class="step-content">
+                <h2 class="text-xl font-semibold mb-4">选择邮件主题</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Text-only themes -->
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="simple-text" data-type="text">
+                        <div class="p-3 bg-primary text-white font-semibold">简约文字主题</div>
+                        <div class="p-4">
+                            <div class="bg-gray-100 dark:bg-gray-600 h-6 w-3/4 mb-3 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-2/3 mb-4 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-8 w-1/3 rounded"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="modern-text" data-type="text">
+                        <div class="p-3 bg-blue-500 text-white font-semibold">现代文字主题</div>
+                        <div class="p-4">
+                            <div class="bg-gray-100 dark:bg-gray-600 h-6 w-3/4 mb-3 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-2/3 mb-4 rounded"></div>
+                            <div class="bg-blue-500 h-8 w-1/3 rounded"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="formal-text" data-type="text">
+                        <div class="p-3 bg-gray-800 text-white font-semibold">正式商务文字主题</div>
+                        <div class="p-4">
+                            <div class="bg-gray-100 dark:bg-gray-600 h-6 w-3/4 mb-3 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-2/3 mb-4 rounded"></div>
+                            <div class="bg-gray-800 h-8 w-1/3 rounded"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text and image themes -->
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="header-image" data-type="image">
+                        <div class="h-20 bg-gray-300 dark:bg-gray-500 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2-1h12a1 1 0 011 1v6.5l-3.777-1.947a1 1 0 00-.909.021l-3.736 2.175-2.453-1.227a1 1 0 00-.9.013L3 10.327V5a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                        </div>
+                        <div class="p-3 bg-primary text-white font-semibold">头部图片主题</div>
+                        <div class="p-4">
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                            <div class="bg-gray-100 dark:bg-gray-600 h-4 w-2/3 mb-4 rounded"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="left-image" data-type="image">
+                        <div class="p-3 bg-green-600 text-white font-semibold">左侧图片主题</div>
+                        <div class="p-4 flex">
+                            <div class="w-1/3 bg-gray-300 dark:bg-gray-500 flex items-center justify-center mr-3">
+                                <svg class="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2-1h12a1 1 0 011 1v6.5l-3.777-1.947a1 1 0 00-.909.021l-3.736 2.175-2.453-1.227a1 1 0 00-.9.013L3 10.327V5a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                            </div>
+                            <div class="w-2/3">
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-3/4 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="theme-preview bg-white dark:bg-gray-700 rounded-lg overflow-hidden shadow-md cursor-pointer" data-theme="right-image" data-type="image">
+                        <div class="p-3 bg-purple-600 text-white font-semibold">右侧图片主题</div>
+                        <div class="p-4 flex">
+                            <div class="w-2/3 mr-3">
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-full mb-2 rounded"></div>
+                                <div class="bg-gray-100 dark:bg-gray-600 h-4 w-3/4 rounded"></div>
+                            </div>
+                            <div class="w-1/3 bg-gray-300 dark:bg-gray-500 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm2-1h12a1 1 0 011 1v6.5l-3.777-1.947a1 1 0 00-.909.021l-3.736 2.175-2.453-1.227a1 1 0 00-.9.013L3 10.327V5a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button id="next-to-step-2" class="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded transition duration-300 opacity-50 cursor-not-allowed" disabled>
+                        下一步
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Content Editing (initially hidden) -->
+            <div id="step-2" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">编辑邮件内容</h2>
+                
+                <div class="space-y-6">
+                    <!-- Common fields for all themes -->
+                    <div>
+                        <label for="email-subject" class="block text-sm font-medium mb-1">邮件主题</label>
+                        <input type="text" id="email-subject" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="请输入邮件主题">
+                    </div>
+                    
+                    <div>
+                        <label for="sender-name" class="block text-sm font-medium mb-1">发件人名称</label>
+                        <input type="text" id="sender-name" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="您的姓名或公司名称">
+                    </div>
+                    
+                    <div>
+                        <label for="sender-email" class="block text-sm font-medium mb-1">发件人邮箱</label>
+                        <input type="email" id="sender-email" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="email@example.com">
+                    </div>
+                    
+                    <div>
+                        <label for="email-header" class="block text-sm font-medium mb-1">邮件标题</label>
+                        <input type="text" id="email-header" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="邮件内容的主标题">
+                    </div>
+                    
+                    <div>
+                        <label for="email-content" class="block text-sm font-medium mb-1">邮件正文</label>
+                        <textarea id="email-content" rows="6" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="请输入邮件正文内容..."></textarea>
+                    </div>
+                    
+                    <!-- Image upload fields (initially hidden, will show based on theme) -->
+                    <div id="image-upload-container" class="hidden">
+                        <label class="block text-sm font-medium mb-1">邮件图片</label>
+                        <div class="image-uploader">
+                            <input type="file" id="email-image" accept="image/*">
+                            <div id="image-placeholder" class="text-center">
+                                <svg class="w-10 h-10 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">点击或拖放图片到此处</p>
+                            </div>
+                            <img id="image-preview" class="hidden">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="cta-text" class="block text-sm font-medium mb-1">按钮文本</label>
+                        <input type="text" id="cta-text" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="例如：了解更多、立即购买等">
+                    </div>
+                    
+                    <div>
+                        <label for="cta-url" class="block text-sm font-medium mb-1">按钮链接</label>
+                        <input type="url" id="cta-url" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="https://example.com/landing-page">
+                    </div>
+                    
+                    <div>
+                        <label for="footer-text" class="block text-sm font-medium mb-1">页脚文本</label>
+                        <textarea id="footer-text" rows="2" class="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base" placeholder="公司地址、联系方式等..."></textarea>
+                    </div>
+                    
+                    <!-- Color picker for primary color -->
+                    <div>
+                        <label for="primary-color" class="block text-sm font-medium mb-1">主题色</label>
+                        <div class="flex items-center">
+                            <input type="color" id="primary-color" value="#5D5CDE" class="h-10 w-10 p-0 rounded-md mr-2">
+                            <input type="text" id="primary-color-hex" value="#5D5CDE" class="block w-32 border border-gray-300 dark:border-gray-600 rounded-md px-4 py-2 bg-white dark:bg-gray-700 text-base">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-between">
+                    <button id="back-to-step-1" class="border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-6 rounded transition duration-300">
+                        返回
+                    </button>
+                    <button id="next-to-step-3" class="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded transition duration-300">
+                        预览
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Preview (initially hidden) -->
+            <div id="step-3" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">邮件预览</h2>
+                
+                <div class="flex justify-center mb-4 border-b border-gray-200 dark:border-gray-700">
+                    <button class="device-button tab-active py-2 px-4" data-device="desktop">桌面端</button>
+                    <button class="device-button py-2 px-4" data-device="tablet">平板</button>
+                    <button class="device-button py-2 px-4" data-device="mobile">手机</button>
+                </div>
+                
+                <div class="email-preview-container device-desktop bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                    <div id="email-preview" class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden mx-auto max-w-4xl"></div>
+                </div>
+                
+                <div class="mt-8 flex justify-between">
+                    <button id="back-to-step-2" class="border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-6 rounded transition duration-300">
+                        返回编辑
+                    </button>
+                    <button id="next-to-step-4" class="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded transition duration-300">
+                        导出代码
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Export Code (initially hidden) -->
+            <div id="step-4" class="step-content hidden">
+                <h2 class="text-xl font-semibold mb-4">导出HTML代码</h2>
+                
+                <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                    <pre id="export-code" class="language-html overflow-auto max-h-96 p-4 text-sm"></pre>
+                    <div class="mt-4 flex justify-end">
+                        <button id="copy-code" class="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded transition duration-300">
+                            复制代码
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-between">
+                    <button id="back-to-step-3" class="border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium py-2 px-6 rounded transition duration-300">
+                        返回预览
+                    </button>
+                    <button id="reset-app" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded transition duration-300">
+                        重新开始
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Helper to set active step
+        function setActiveStep(stepNumber) {
+            // Hide all step content
+            document.querySelectorAll('.step-content').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show the active step content
+            document.getElementById(`step-${stepNumber}`).classList.remove('hidden');
+            
+            // Update step indicators
+            document.querySelectorAll('.step-indicator').forEach((el, index) => {
+                const circle = el.querySelector('div');
+                if (index < stepNumber) {
+                    // Completed steps
+                    circle.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+                    circle.classList.add('bg-primary', 'text-white');
+                } else if (index === stepNumber - 1) {
+                    // Current step
+                    circle.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+                    circle.classList.add('bg-primary', 'text-white');
+                } else {
+                    // Future steps
+                    circle.classList.remove('bg-primary', 'text-white');
+                    circle.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+                }
+            });
+        }
+
+        // Global state object
+        const state = {
+            selectedTheme: '',
+            themeType: '',
+            imageDataUrl: null,
+            primaryColor: '#5D5CDE'
+        };
+
+        // Theme selection
+        document.querySelectorAll('.theme-preview').forEach(theme => {
+            theme.addEventListener('click', () => {
+                // Remove selected class from all themes
+                document.querySelectorAll('.theme-preview').forEach(t => {
+                    t.classList.remove('selected-theme');
+                });
+                
+                // Add selected class to clicked theme
+                theme.classList.add('selected-theme');
+                
+                // Update state
+                state.selectedTheme = theme.dataset.theme;
+                state.themeType = theme.dataset.type;
+                
+                // Enable next button
+                const nextButton = document.getElementById('next-to-step-2');
+                nextButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                nextButton.disabled = false;
+                
+                // Show/hide image upload based on theme type
+                if (state.themeType === 'image') {
+                    document.getElementById('image-upload-container').classList.remove('hidden');
+                } else {
+                    document.getElementById('image-upload-container').classList.add('hidden');
+                }
+            });
+        });
+
+        // Image upload handling
+        const imageInput = document.getElementById('email-image');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.imageDataUrl = e.target.result;
+                    imagePreview.src = state.imageDataUrl;
+                    imagePreview.classList.remove('hidden');
+                    imagePlaceholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Color picker synchronization
+        const colorPicker = document.getElementById('primary-color');
+        const colorHexInput = document.getElementById('primary-color-hex');
+        
+        colorPicker.addEventListener('input', (e) => {
+            const color = e.target.value;
+            colorHexInput.value = color;
+            state.primaryColor = color;
+        });
+        
+        colorHexInput.addEventListener('input', (e) => {
+            const color = e.target.value;
+            if (/^#[0-9A-F]{6}$/i.test(color)) {
+                colorPicker.value = color;
+                state.primaryColor = color;
+            }
+        });
+
+        // Device preview switching
+        document.querySelectorAll('.device-button').forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                document.querySelectorAll('.device-button').forEach(b => {
+                    b.classList.remove('tab-active');
+                });
+                
+                // Add active class to clicked button
+                button.classList.add('tab-active');
+                
+                // Update preview container
+                const container = document.querySelector('.email-preview-container');
+                container.classList.remove('device-desktop', 'device-tablet', 'device-mobile');
+                container.classList.add(`device-${button.dataset.device}`);
+            });
+        });
+
+        // Step navigation
+        document.getElementById('next-to-step-2').addEventListener('click', () => {
+            setActiveStep(2);
+        });
+        
+        document.getElementById('back-to-step-1').addEventListener('click', () => {
+            setActiveStep(1);
+        });
+        
+        document.getElementById('next-to-step-3').addEventListener('click', () => {
+            generateEmailPreview();
+            setActiveStep(3);
+        });
+        
+        document.getElementById('back-to-step-2').addEventListener('click', () => {
+            setActiveStep(2);
+        });
+        
+        document.getElementById('next-to-step-4').addEventListener('click', () => {
+            generateExportCode();
+            setActiveStep(4);
+        });
+        
+        document.getElementById('back-to-step-3').addEventListener('click', () => {
+            setActiveStep(3);
+        });
+        
+        document.getElementById('reset-app').addEventListener('click', () => {
+            window.location.reload();
+        });
+
+        // Copy code functionality
+        document.getElementById('copy-code').addEventListener('click', () => {
+            const codeEl = document.getElementById('export-code');
+            const range = document.createRange();
+            range.selectNode(codeEl);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const button = document.getElementById('copy-code');
+                    const originalText = button.textContent;
+                    button.textContent = '复制成功!';
+                    button.classList.add('bg-green-500');
+                    button.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('bg-green-500');
+                        button.classList.add('bg-primary', 'hover:bg-primary-dark');
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('无法复制代码:', err);
+            }
+            
+            window.getSelection().removeAllRanges();
+        });
+
+        // Email preview generation
+        function generateEmailPreview() {
+            const emailPreview = document.getElementById('email-preview');
+            const emailSubject = document.getElementById('email-subject').value || '邮件主题';
+            const senderName = document.getElementById('sender-name').value || '发件人';
+            const senderEmail = document.getElementById('sender-email').value || 'email@example.com';
+            const emailHeader = document.getElementById('email-header').value || '邮件标题';
+            const emailContent = document.getElementById('email-content').value || '邮件内容...';
+            const ctaText = document.getElementById('cta-text').value || '了解更多';
+            const ctaUrl = document.getElementById('cta-url').value || '#';
+            const footerText = document.getElementById('footer-text').value || '© 2023 Company Name. All rights reserved.';
+            
+            // Generate HTML based on selected theme
+            let html = '';
+            
+            // Common header
+            html += `
+                <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="padding: 15px; background-color: ${state.primaryColor}; color: white; text-align: center;">
+                        <h2 style="margin: 0; font-size: 22px; font-weight: bold;">${emailSubject}</h2>
+                    </div>
+            `;
+            
+            // Theme-specific content
+            switch (state.selectedTheme) {
+                case 'simple-text':
+                    html += `
+                        <div style="padding: 30px; background-color: #ffffff;">
+                            <h1 style="color: #333333; font-size: 26px; margin-top: 0; margin-bottom: 20px;">${emailHeader}</h1>
+                            <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                            <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+                                <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">${ctaText}</a>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'modern-text':
+                    html += `
+                        <div style="padding: 30px; background-color: #ffffff; border-left: 4px solid ${state.primaryColor}; border-right: 4px solid ${state.primaryColor};">
+                            <h1 style="color: #333333; font-size: 28px; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">${emailHeader}</h1>
+                            <p style="color: #666666; font-size: 16px; line-height: 1.8; margin-bottom: 30px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                            <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+                                <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block; box-shadow: 0 3px 6px rgba(0,0,0,0.1);">${ctaText}</a>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'formal-text':
+                    html += `
+                        <div style="padding: 40px 30px; background-color: #ffffff; border-top: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee;">
+                            <h1 style="color: #222222; font-size: 24px; margin-top: 0; margin-bottom: 25px; font-weight: normal; text-align: center;">${emailHeader}</h1>
+                            <p style="color: #444444; font-size: 15px; line-height: 1.7; margin-bottom: 30px; text-align: justify;">${emailContent.replace(/\n/g, '<br>')}</p>
+                            <div style="text-align: center; margin-top: 40px; margin-bottom: 30px;">
+                                <a href="${ctaUrl}" style="background-color: #333333; color: white; padding: 12px 28px; text-decoration: none; font-weight: normal; display: inline-block; text-transform: uppercase; letter-spacing: 1px; font-size: 14px;">${ctaText}</a>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'header-image':
+                    const headerImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjMwMCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+                        <div style="background-color: #ffffff;">
+                            <div style="max-width: 600px; margin: 0 auto;">
+                                <img src="${headerImage}" alt="Header Image" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto;">
+                            </div>
+                            <div style="padding: 30px;">
+                                <h1 style="color: #333333; font-size: 26px; margin-top: 0; margin-bottom: 20px;">${emailHeader}</h1>
+                                <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                                <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+                                    <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">${ctaText}</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'left-image':
+                    const leftImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+                        <div style="padding: 30px; background-color: #ffffff;">
+                            <div style="display: table; width: 100%;">
+                                <div style="display: table-cell; vertical-align: middle; width: 40%; padding-right: 20px;">
+                                    <img src="${leftImage}" alt="Email Image" style="width: 100%; height: auto; display: block; border-radius: 4px;">
+                                </div>
+                                <div style="display: table-cell; vertical-align: middle; width: 60%;">
+                                    <h1 style="color: #333333; font-size: 24px; margin-top: 0; margin-bottom: 15px;">${emailHeader}</h1>
+                                    <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                                    <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">${ctaText}</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'right-image':
+                    const rightImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+                        <div style="padding: 30px; background-color: #ffffff;">
+                            <div style="display: table; width: 100%;">
+                                <div style="display: table-cell; vertical-align: middle; width: 60%;">
+                                    <h1 style="color: #333333; font-size: 24px; margin-top: 0; margin-bottom: 15px;">${emailHeader}</h1>
+                                    <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                                    <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">${ctaText}</a>
+                                </div>
+                                <div style="display: table-cell; vertical-align: middle; width: 40%; padding-left: 20px;">
+                                    <img src="${rightImage}" alt="Email Image" style="width: 100%; height: auto; display: block; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                default:
+                    html += `
+                        <div style="padding: 30px; background-color: #ffffff;">
+                            <h1 style="color: #333333; font-size: 26px; margin-top: 0; margin-bottom: 20px;">${emailHeader}</h1>
+                            <p style="color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">${emailContent.replace(/\n/g, '<br>')}</p>
+                            <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+                                <a href="${ctaUrl}" style="background-color: ${state.primaryColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">${ctaText}</a>
+                            </div>
+                        </div>
+                    `;
+            }
+            
+            // Common footer
+            html += `
+                    <div style="padding: 20px; background-color: #f7f7f7; text-align: center; color: #888888; font-size: 14px; line-height: 1.5;">
+                        <p style="margin-bottom: 10px;">${footerText}</p>
+                        <p style="margin-top: 0;">发件人: ${senderName} &lt;${senderEmail}&gt;</p>
+                    </div>
+                </div>
+            `;
+            
+            // Set the HTML
+            emailPreview.innerHTML = html;
+        }
+
+        // Generate export code
+        function generateExportCode() {
+            const exportCode = document.getElementById('export-code');
+            const emailSubject = document.getElementById('email-subject').value || '邮件主题';
+            const senderName = document.getElementById('sender-name').value || '发件人';
+            const senderEmail = document.getElementById('sender-email').value || 'email@example.com';
+            const emailHeader = document.getElementById('email-header').value || '邮件标题';
+            const emailContent = document.getElementById('email-content').value || '邮件内容...';
+            const ctaText = document.getElementById('cta-text').value || '了解更多';
+            const ctaUrl = document.getElementById('cta-url').value || '#';
+            const footerText = document.getElementById('footer-text').value || '© 2023 Company Name. All rights reserved.';
+            
+            // Create email code with responsive design
+            let html = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>${emailSubject}</title>
+    <style type="text/css">
+        /* 基础重置 */
+        body, p, h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        table td {
+            border-collapse: collapse;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+        a {
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+        /* 基础布局 */
+        .ReadMsgBody { width: 100%; }
+        .ExternalClass { width: 100%; }
+        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {
+            line-height: 100%;
+        }
+        .email-container {
+            max-width: 600px !important;
+            margin: 0 auto !important;
+        }
+        /* 响应式调整 */
+        @media screen and (max-width: 600px) {
+            .fluid {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+            }
+            .stack-column,
+            .stack-column-center {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                direction: ltr !important;
+            }
+            .stack-column-center {
+                text-align: center !important;
+            }
+            .center-on-narrow {
+                text-align: center !important;
+                display: block !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
+                float: none !important;
+            }
+            table.center-on-narrow {
+                display: inline-block !important;
+            }
+            .email-container p {
+                font-size: 17px !important;
+                line-height: 1.5 !important;
+            }
+        }
+    </style>
+</head>
+<body width="100%" style="margin: 0; padding: 0 !important; mso-line-height-rule: exactly; background-color: #f5f5f5;">
+    <center style="width: 100%; background-color: #f5f5f5;">
+        <!-- 预览文本（对大多数电子邮件客户端隐藏）-->
+        <div style="display: none; font-size: 1px; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all; font-family: sans-serif;">
+            ${emailSubject}
+        </div>
+        <!--
+            设置白色背景色并开始主容器
+        -->
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;" class="email-container">
+`;
+
+            // Theme-specific content
+            switch (state.selectedTheme) {
+                case 'simple-text':
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 正文 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" align="left" valign="top" style="padding: 35px; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333;">
+                        <h2 style="margin: 0 0 20px 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 28px; color: #333333; font-weight: bold;">${emailHeader}</h2>
+                        <p style="margin: 0 0 25px 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666;">${emailContent.replace(/\n/g, '<br>')}</p>
+                        <!-- 按钮 -->
+                        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px auto;">
+                            <tr>
+                                <td align="center" bgcolor="${state.primaryColor}" style="border-radius: 4px;">
+                                    <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 4px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 38px; margin: 0; padding: 0 30px; text-decoration: none;">${ctaText}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                    
+                case 'modern-text':
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 正文 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td background="#ffffff" align="left" valign="top" style="padding: 35px; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333; background-color: #ffffff; border-left: 4px solid ${state.primaryColor}; border-right: 4px solid ${state.primaryColor};">
+                        <h2 style="margin: 0 0 20px 0; font-family: Arial, sans-serif; font-size: 26px; line-height: 32px; color: #333333; font-weight: bold; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">${emailHeader}</h2>
+                        <p style="margin: 0 0 25px 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 28px; color: #666666;">${emailContent.replace(/\n/g, '<br>')}</p>
+                        <!-- 按钮 -->
+                        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px auto;">
+                            <tr>
+                                <td align="center" bgcolor="${state.primaryColor}" style="border-radius: 30px;">
+                                    <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 30px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 42px; margin: 0; padding: 0 35px; text-decoration: none; box-shadow: 0 3px 6px rgba(0,0,0,0.1);">${ctaText}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                    
+                case 'formal-text':
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#333333" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: 'Times New Roman', Times, serif; font-size: 24px; line-height: 30px; font-weight: normal;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 正文 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" align="left" valign="top" style="padding: 40px; font-family: 'Times New Roman', Times, serif; font-size: 16px; line-height: 24px; color: #333333; background-color: #ffffff; border-top: 1px solid #eeeeee; border-bottom: 1px solid #eeeeee;">
+                        <h2 style="margin: 0 0 25px 0; font-family: 'Times New Roman', Times, serif; font-size: 24px; line-height: 28px; color: #222222; font-weight: normal; text-align: center;">${emailHeader}</h2>
+                        <p style="margin: 0 0 25px 0; font-family: 'Times New Roman', Times, serif; font-size: 15px; line-height: 27px; color: #444444; text-align: justify;">${emailContent.replace(/\n/g, '<br>')}</p>
+                        <!-- 按钮 -->
+                        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 40px auto 30px;">
+                            <tr>
+                                <td align="center" bgcolor="#333333">
+                                    <a href="${ctaUrl}" target="_blank" style="background: #333333; color: #ffffff; display: inline-block; font-family: 'Times New Roman', Times, serif; font-size: 14px; font-weight: normal; line-height: 38px; margin: 0; padding: 0 30px; text-decoration: none; text-transform: uppercase; letter-spacing: 1px;">${ctaText}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                    
+                case 'header-image':
+                    const headerImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjMwMCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 大图 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td style="padding: 0;">
+                        <img src="${headerImage}" width="600" height="" alt="Header Image" border="0" style="width: 100%; max-width: 600px; height: auto; display: block;" class="fluid">
+                    </td>
+                </tr>
+            </table>
+            <!-- 正文 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" align="left" valign="top" style="padding: 35px; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333;">
+                        <h2 style="margin: 0 0 20px 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 28px; color: #333333; font-weight: bold;">${emailHeader}</h2>
+                        <p style="margin: 0 0 25px 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666;">${emailContent.replace(/\n/g, '<br>')}</p>
+                        <!-- 按钮 -->
+                        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: auto;">
+                            <tr>
+                                <td align="center" bgcolor="${state.primaryColor}" style="border-radius: 4px;">
+                                    <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 4px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 38px; margin: 0; padding: 0 30px; text-decoration: none;">${ctaText}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                    
+                case 'left-image':
+                    const leftImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 左侧图片 + 文本 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" style="padding: 35px;">
+                        <!--[if (gte mso 9)|(IE)]>
+                        <table align="center" border="0" cellspacing="0" cellpadding="0" width="530">
+                        <tr>
+                        <td align="center" valign="top" width="212">
+                        <![endif]-->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td style="padding: 0 20px 0 0;" class="stack-column-center">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666; text-align: center; padding-bottom: 20px;" class="center-on-narrow">
+                                                <img src="${leftImage}" width="240" height="" alt="Left Image" border="0" style="width: 100%; max-width: 240px; height: auto; display: block; margin: 0 auto;" class="center-on-narrow">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td style="padding: 0 0 0 0;" class="stack-column-center">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666;" class="center-on-narrow">
+                                                <h2 style="margin: 0 0 10px 0; font-family: Arial, sans-serif; font-size: 22px; line-height: 28px; color: #333333; font-weight: bold;">${emailHeader}</h2>
+                                                <p style="margin: 0 0 20px 0;">${emailContent.replace(/\n/g, '<br>')}</p>
+                                                <!-- 按钮 -->
+                                                <table cellspacing="0" cellpadding="0" border="0" class="center-on-narrow" style="float:left;">
+                                                    <tr>
+                                                        <td style="border-radius: 4px; background: ${state.primaryColor}; text-align: center;">
+                                                            <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 4px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 38px; margin: 0; padding: 0 20px; text-decoration: none; width:auto;">${ctaText}</a>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <!--[if (gte mso 9)|(IE)]>
+                        </td>
+                        </tr>
+                        </table>
+                        <![endif]-->
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                    
+                case 'right-image':
+                    const rightImage = state.imageDataUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjE1MCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPuWbvueJh+S7u+WKoeWZqDwvdGV4dD48L3N2Zz4=';
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 右侧图片 + 文本 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" style="padding: 35px;">
+                        <!--[if (gte mso 9)|(IE)]>
+                        <table align="center" border="0" cellspacing="0" cellpadding="0" width="530">
+                        <tr>
+                        <td align="center" valign="top" width="318">
+                        <![endif]-->
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td style="padding: 0 0 0 0;" class="stack-column-center">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666;" class="center-on-narrow">
+                                                <h2 style="margin: 0 0 10px 0; font-family: Arial, sans-serif; font-size: 22px; line-height: 28px; color: #333333; font-weight: bold;">${emailHeader}</h2>
+                                                <p style="margin: 0 0 20px 0;">${emailContent.replace(/\n/g, '<br>')}</p>
+                                                <!-- 按钮 -->
+                                                <table cellspacing="0" cellpadding="0" border="0" class="center-on-narrow" style="float:left;">
+                                                    <tr>
+                                                        <td style="border-radius: 4px; background: ${state.primaryColor}; text-align: center;">
+                                                            <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 4px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 38px; margin: 0; padding: 0 20px; text-decoration: none; width:auto;">${ctaText}</a>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td style="padding: 0 0 0 20px;" class="stack-column-center">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666; text-align: center; padding-bottom: 20px;" class="center-on-narrow">
+                                                <img src="${rightImage}" width="240" height="" alt="Right Image" border="0" style="width: 100%; max-width: 240px; height: auto; display: block; margin: 0 auto;" class="center-on-narrow">
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <!--[if (gte mso 9)|(IE)]>
+                        </td>
+                        </tr>
+                        </table>
+                        <![endif]-->
+                    </td>
+                </tr>
+            </table>
+`;
+                    break;
+                
+                default:
+                    html += `
+            <!-- 标题 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="${state.primaryColor}" align="center" valign="middle" style="text-align: center; padding: 20px; color: #ffffff;">
+                        <h1 style="margin: 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 30px; font-weight: bold;">${emailSubject}</h1>
+                    </td>
+                </tr>
+            </table>
+            <!-- 正文 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#ffffff" align="left" valign="top" style="padding: 35px; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333;">
+                        <h2 style="margin: 0 0 20px 0; font-family: Arial, sans-serif; font-size: 24px; line-height: 28px; color: #333333; font-weight: bold;">${emailHeader}</h2>
+                        <p style="margin: 0 0 25px 0; font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #666666;">${emailContent.replace(/\n/g, '<br>')}</p>
+                        <!-- 按钮 -->
+                        <table align="center" role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: auto;">
+                            <tr>
+                                <td align="center" bgcolor="${state.primaryColor}" style="border-radius: 4px;">
+                                    <a href="${ctaUrl}" target="_blank" style="background: ${state.primaryColor}; border-radius: 4px; color: #ffffff; display: inline-block; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; line-height: 38px; margin: 0; padding: 0 30px; text-decoration: none;">${ctaText}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+`;
+            }
+            
+            // Common footer
+            html += `
+            <!-- 页脚 -->
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="max-width: 600px;">
+                <tr>
+                    <td bgcolor="#f8f8f8" style="padding: 20px; font-family: Arial, sans-serif; font-size: 14px; line-height: 20px; color: #888888; text-align: center;">
+                        <p style="margin: 0 0 8px 0;">${footerText}</p>
+                        <p style="margin: 0;">发件人: ${senderName} &lt;${senderEmail}&gt;</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </center>
+</body>
+</html>`;
+            
+            // Escape HTML for display
+            exportCode.textContent = html;
+        }
+    </script>
+</body>
+</html>
